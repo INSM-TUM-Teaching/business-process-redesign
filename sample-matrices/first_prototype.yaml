@@ -1,0 +1,40 @@
+metadata:
+  format_version: "1.0"
+  description: "Process adjacency matrix with temporal and existential dependencies"
+  created: "2025-05-22T10:30:00Z"
+  activities: [A, B, C, D, E]
+
+dependencies:
+  - from: A
+    to: B
+    temporal:
+      type: direct
+      symbol: "≺_d"
+    existential:
+      type: implication
+      symbol: "⇒"
+  
+  - from: B
+    to: C
+    temporal:
+      type: eventual
+      symbol: "≺_e"
+    existential:
+      type: equivalence
+      symbol: "⇔"
+  
+  - from: C
+    to: D
+    temporal: null
+    existential:
+      type: nand
+      symbol: "|"
+  
+  - from: D
+    to: E
+    temporal:
+      type: direct
+      symbol: "≺_d"
+    existential:
+      type: independence
+      symbol: "⊥"

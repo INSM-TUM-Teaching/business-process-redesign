@@ -5,17 +5,29 @@ class TemporalType(Enum):
     """
     Defines the type of temporal relationship between two activities.
     """
-    DIRECT_PRECEDES = auto()  # A <d B: Termination of A directly enables B.
-    EVENTUAL_PRECEDES = auto()  # A <e B: B eventually follows A.
-    INDEPENDENCE = auto() # A and B are temporally independent.
+    DIRECT = auto()
+    EVENTUAL = auto()
+    INDEPENDENCE = auto()
+
+    @classmethod
+    def from_yaml(cls, yaml_type_str: str) -> 'TemporalType':
+        """Converts a YAML string type to a TemporalType enum member."""
+        mapping = {
+            "direct": cls.DIRECT,
+            "eventual": cls.EVENTUAL,
+        }
+        lower_value = yaml_type_str.lower()
+        if lower_value not in mapping:
+            raise ValueError(f"Unknown temporal type string from YAML: '{yaml_type_str}'")
+        return mapping[lower_value]
 
 @dataclass
 class TemporalDependency:
     """
     Represents a temporal dependency between two activities.
     The direction is implicit from the (source, target) key in the main matrix.
-    - If (A, B) maps to TemporalDependency(type=TemporalType.DIRECT_PRECEDES), it means A <d B.
-    - If (A, B) maps to TemporalDependency(type=TemporalType.EVENTUAL_PRECEDES), it means A <e B.
+    - If (A, B) maps to TemporalDependency(type=TemporalType.DIRECT), it means A <d B.
+    - If (A, B) maps to TemporalDependency(type=TemporalType.EVENTUAL), it means A <e B.
     """
     type: TemporalType
 
@@ -29,6 +41,22 @@ class ExistentialType(Enum):
     NAND = auto()  # A | B: If A occurs, B does not, and vice versa; or neither occurs.
     OR = auto()  # A v B: At least one of A or B must occur.
     INDEPENDENCE = auto() # A and B are existentially independent.
+
+    @classmethod
+    def from_yaml(cls, yaml_type_str: str) -> 'ExistentialType':
+        """Converts a YAML string type to an ExistentialType enum member."""
+        mapping = {
+            "implication": cls.IMPLICATION,
+            "equivalence": cls.EQUIVALENCE,
+            "negated equivalence": cls.NEGATED_EQUIVALENCE,
+            "nand": cls.NAND,
+            "or": cls.OR,
+            "independence": cls.INDEPENDENCE,
+        }
+        lower_value = yaml_type_str.lower()
+        if lower_value not in mapping:
+            raise ValueError(f"Unknown existential type string from YAML: '{yaml_type_str}'")
+        return mapping[lower_value]
 
 @dataclass
 class ExistentialDependency:
