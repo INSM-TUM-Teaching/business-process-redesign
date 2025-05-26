@@ -27,7 +27,7 @@ Dependency from B to C:
   Temporal: EVENTUAL
   Existential: EQUIVALENCE
 Dependency from C to D:
-  Temporal: None
+  Temporal: INDEPENDENCE
   Existential: NAND
 Dependency from D to E:
   Temporal: DIRECT

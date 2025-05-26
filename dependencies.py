@@ -15,6 +15,7 @@ class TemporalType(Enum):
         mapping = {
             "direct": cls.DIRECT,
             "eventual": cls.EVENTUAL,
+            "independence": cls.INDEPENDENCE,
         }
         lower_value = yaml_type_str.lower()
         if lower_value not in mapping:
