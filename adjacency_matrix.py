@@ -1,7 +1,13 @@
 from dataclasses import dataclass
 import yaml
 from typing import Dict, Tuple, List, Optional
-from dependencies import TemporalDependency, ExistentialDependency, TemporalType, ExistentialType
+from dependencies import (
+    TemporalDependency,
+    ExistentialDependency,
+    TemporalType,
+    ExistentialType,
+)
+
 
 @dataclass
 class AdjacencyMatrix:
@@ -9,30 +15,44 @@ class AdjacencyMatrix:
     Represents an adjacency matrix for process activities,
     mapping pairs of activities to their temporal and existential dependencies.
     """
-    dependencies: Dict[Tuple[str, str], Tuple[Optional[TemporalDependency], Optional[ExistentialDependency]]]
+
+    dependencies: Dict[
+        Tuple[str, str],
+        Tuple[Optional[TemporalDependency], Optional[ExistentialDependency]],
+    ]
     activities: List[str]
 
     def __init__(self, activities: List[str]):
         self.activities = activities
         self.dependencies = {}
 
-    def add_dependency(self, from_activity: str, to_activity: str,
-                       temporal_dep: Optional[TemporalDependency],
-                       existential_dep: Optional[ExistentialDependency]):
+    def add_dependency(
+        self,
+        from_activity: str,
+        to_activity: str,
+        temporal_dep: Optional[TemporalDependency],
+        existential_dep: Optional[ExistentialDependency],
+    ):
         """Adds a dependency to the matrix."""
         if from_activity not in self.activities or to_activity not in self.activities:
             raise ValueError("Activities must be in the predefined list of activities.")
-        self.dependencies[(from_activity, to_activity)] = (temporal_dep, existential_dep)
+        self.dependencies[(from_activity, to_activity)] = (
+            temporal_dep,
+            existential_dep,
+        )
 
-    def get_dependency(self, from_activity: str, to_activity: str) -> Optional[Tuple[Optional[TemporalDependency], Optional[ExistentialDependency]]]:
+    def get_dependency(
+        self, from_activity: str, to_activity: str
+    ) -> Optional[Tuple[Optional[TemporalDependency], Optional[ExistentialDependency]]]:
         """Retrieves the dependency between two activities."""
         return self.dependencies.get((from_activity, to_activity))
+
 
 def parse_yaml_to_adjacency_matrix(file_path: str) -> AdjacencyMatrix:
     """
     Parses a YAML file defining process dependencies into an AdjacencyMatrix.
     """
-    with open(file_path, 'r') as f:
+    with open(file_path, "r") as f:
         data = yaml.safe_load(f)
 
     metadata = data.get("metadata", {})
@@ -57,8 +77,9 @@ def parse_yaml_to_adjacency_matrix(file_path: str) -> AdjacencyMatrix:
                 ttype = TemporalType.from_yaml(temporal_data["type"])
                 temporal_dep_obj = TemporalDependency(type=ttype)
             except ValueError as e:
-                print(f"Warning: Skipping temporal dependency for ({from_activity}, {to_activity}) due to unknown type: {e}")
-
+                print(
+                    f"Warning: Skipping temporal dependency for ({from_activity}, {to_activity}) due to unknown type: {e}"
+                )
 
         existential_data = dep.get("existential")
         existential_dep_obj = None
@@ -67,8 +88,12 @@ def parse_yaml_to_adjacency_matrix(file_path: str) -> AdjacencyMatrix:
                 etype = ExistentialType.from_yaml(existential_data["type"])
                 existential_dep_obj = ExistentialDependency(type=etype)
             except ValueError as e:
-                 print(f"Warning: Skipping existential dependency for ({from_activity}, {to_activity}) due to unknown type: {e}")
+                print(
+                    f"Warning: Skipping existential dependency for ({from_activity}, {to_activity}) due to unknown type: {e}"
+                )
 
-        matrix.add_dependency(from_activity, to_activity, temporal_dep_obj, existential_dep_obj)
+        matrix.add_dependency(
+            from_activity, to_activity, temporal_dep_obj, existential_dep_obj
+        )
 
     return matrix
