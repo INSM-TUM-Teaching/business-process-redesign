@@ -64,24 +64,24 @@ def build_permutations(subset: Set[str]) -> List[List[str]]:
 
 
 def satisfies_temporal_constraints(
-    sequence: List[str],
+    variant: List[str],
     temporal_dependencies: Dict[Tuple[str, str], TemporalDependency],
 ) -> bool:
     """
-    Checks if a sequence of activities satisfies all temporal constraints.
+    Checks if a variant of activities satisfies all temporal constraints.
     """
-    if not sequence:  # An empty sequence has no temporal constraints to violate
+    if not variant:  # An empty variant has no temporal constraints to violate
         return True
 
-    activity_to_pos = {activity: i for i, activity in enumerate(sequence)}
+    activity_to_pos = {activity: i for i, activity in enumerate(variant)}
 
-    for i in range(len(sequence)):
-        for j in range(len(sequence)):
+    for i in range(len(variant)):
+        for j in range(len(variant)):
             if i == j:
                 continue
 
-            ai = sequence[i]
-            aj = sequence[j]
+            ai = variant[i]
+            aj = variant[j]
 
             dependency = temporal_dependencies.get((ai, aj))
             if not dependency or dependency.type == TemporalType.INDEPENDENCE:
@@ -102,9 +102,9 @@ def satisfies_temporal_constraints(
     return True
 
 
-def generate_acceptance_sequences(adj_matrix: AdjacencyMatrix) -> List[List[str]]:
+def generate_acceptance_variants(adj_matrix: AdjacencyMatrix) -> List[List[str]]:
     """
-    Generates all valid acceptance sequences from an adjacency matrix.
+    Generates all valid acceptance variants from an adjacency matrix.
     """
     activities = adj_matrix.activities
     temporal_deps: Dict[Tuple[str, str], TemporalDependency] = {}
@@ -116,7 +116,7 @@ def generate_acceptance_sequences(adj_matrix: AdjacencyMatrix) -> List[List[str]
         if exist_dep:
             existential_deps[(source, target)] = exist_dep
 
-    acceptance_sequences = []
+    acceptance_variants = []
     n = len(activities)
 
     for i in range(1 << n):  # 2^n subsets
@@ -133,9 +133,9 @@ def generate_acceptance_sequences(adj_matrix: AdjacencyMatrix) -> List[List[str]
             permutations_of_subset = build_permutations(current_subset_activities)
             for seq in permutations_of_subset:
                 if satisfies_temporal_constraints(seq, temporal_deps):
-                    acceptance_sequences.append(seq)
+                    acceptance_variants.append(seq)
 
-    return acceptance_sequences
+    return acceptance_variants
 
 
 # if __name__ == "__main__":
@@ -144,7 +144,7 @@ def generate_acceptance_sequences(adj_matrix: AdjacencyMatrix) -> List[List[str]
 #     adj_matrix.add_dependency("B", "C", TemporalDependency(TemporalType.EVENTUAL), ExistentialDependency(ExistentialType.EQUIVALENCE))
 #     adj_matrix.add_dependency("C", "D", TemporalDependency(TemporalType.INDEPENDENCE), ExistentialDependency(ExistentialType.NAND))
 #     adj_matrix.add_dependency("D", "E", TemporalDependency(TemporalType.DIRECT), ExistentialDependency(ExistentialType.INDEPENDENCE))
-#     acceptance_seqs = generate_acceptance_sequences(adj_matrix)
-#     print("Generated Acceptance Sequences:")
-#     for seq in acceptance_seqs:
-#         print(seq)
+#     acceptance_vars = generate_acceptance_variants(adj_matrix)
+#     print("Generated Acceptance Variants:")
+#     for var in acceptance_vars:
+#         print(var)

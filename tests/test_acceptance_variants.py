@@ -1,11 +1,11 @@
 import pytest
 from adjacency_matrix import AdjacencyMatrix, parse_yaml_to_adjacency_matrix
 from dependencies import TemporalType, ExistentialType, TemporalDependency, ExistentialDependency
-from acceptance_sequences import (
+from acceptance_variants import (
     satisfies_existential_constraints,
     build_permutations,
     satisfies_temporal_constraints,
-    generate_acceptance_sequences
+    generate_acceptance_variants
 )
 
 @pytest.fixture
@@ -124,43 +124,43 @@ def test_satisfies_temporal_independence():
 def test_satisfies_temporal_empty_sequence():
     assert satisfies_temporal_constraints([], {}) == True
 
-def test_generate_acceptance_sequences_simple_direct_implication():
+def test_generate_acceptance_variants_simple_direct_implication():
     adj = AdjacencyMatrix(activities=["A", "B"])
     adj.add_dependency("A", "B", TemporalDependency(TemporalType.DIRECT), ExistentialDependency(ExistentialType.IMPLICATION))
-    sequences = generate_acceptance_sequences(adj)
+    variants = generate_acceptance_variants(adj)
     
-    expected_sequences = sorted([[], ["B"], ["A", "B"]])
-    assert len(sequences) == len(expected_sequences)
-    assert sorted(sequences) == expected_sequences
+    expected_variants = sorted([[], ["B"], ["A", "B"]])
+    assert len(variants) == len(expected_variants)
+    assert sorted(variants) == expected_variants
 
-def test_generate_acceptance_sequences_simple_eventual_equivalence():
+def test_generate_acceptance_variants_simple_eventual_equivalence():
     adj = AdjacencyMatrix(activities=["A", "B"])
     adj.add_dependency("A", "B", TemporalDependency(TemporalType.EVENTUAL), ExistentialDependency(ExistentialType.EQUIVALENCE))
-    sequences = generate_acceptance_sequences(adj)
-    assert sorted(sequences) == sorted([[], ["A", "B"]])
+    variants = generate_acceptance_variants(adj)
+    assert sorted(variants) == sorted([[], ["A", "B"]])
 
-def test_generate_acceptance_sequences_choice_or():
+def test_generate_acceptance_variants_choice_or():
     adj = AdjacencyMatrix(activities=["A", "B"])
     adj.add_dependency("A", "B", None, ExistentialDependency(ExistentialType.OR))
     adj.add_dependency("B", "A", None, ExistentialDependency(ExistentialType.OR))
 
-    sequences = generate_acceptance_sequences(adj)
+    variants = generate_acceptance_variants(adj)
     expected = sorted([["A"], ["B"], ["A", "B"], ["B", "A"]])
-    assert sorted([sorted(s) for s in sequences]) == sorted([sorted(s) for s in expected])
+    assert sorted([sorted(s) for s in variants]) == sorted([sorted(s) for s in expected])
 
-def test_generate_acceptance_sequences_from_yaml_first_prototype():
+def test_generate_acceptance_variants_from_yaml_first_prototype():
     yaml_file_path = "sample-matrices/first_prototype.yaml"
     adj_matrix = parse_yaml_to_adjacency_matrix(yaml_file_path)
-    sequences = generate_acceptance_sequences(adj_matrix)
+    variants = generate_acceptance_variants(adj_matrix)
 
     found_ABCE = False
-    for seq in sequences:
-        if seq == ['A', 'B', 'C', 'E']:
+    for variant in variants:
+        if variant == ['A', 'B', 'C', 'E']:
             found_ABCE = True
-        if 'C' in seq and 'D' in seq:
-            pytest.fail(f"Sequence {seq} contains both C and D, which violates C|D NAND constraint.")
+        if 'C' in variant and 'D' in variant:
+            pytest.fail(f"Variant {variant} contains both C and D, which violates C|D NAND constraint.")
 
-    assert found_ABCE, "Expected sequence [A,B,C,E] not found."
+    assert found_ABCE, "Expected variant [A,B,C,E] not found."
 
     adj_indep = AdjacencyMatrix(activities=["X", "Y"])
     adj_indep.add_dependency("X", "Y", TemporalDependency(TemporalType.INDEPENDENCE), ExistentialDependency(ExistentialType.INDEPENDENCE))
@@ -168,7 +168,7 @@ def test_generate_acceptance_sequences_from_yaml_first_prototype():
     adj_indep.add_dependency("X", "X", TemporalDependency(TemporalType.INDEPENDENCE), ExistentialDependency(ExistentialType.INDEPENDENCE))
     adj_indep.add_dependency("Y", "Y", TemporalDependency(TemporalType.INDEPENDENCE), ExistentialDependency(ExistentialType.INDEPENDENCE))
     
-    sequences_indep = generate_acceptance_sequences(adj_indep)
+    variants_indep = generate_acceptance_variants(adj_indep)
     expected_indep = sorted([[], ["X"], ["Y"], ["X","Y"], ["Y","X"]])
-    actual_indep = sorted([list(s) for s in sequences_indep])
+    actual_indep = sorted([list(s) for s in variants_indep])
     assert actual_indep == expected_indep, f"Expected {expected_indep}, got {actual_indep}"
