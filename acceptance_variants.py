@@ -7,6 +7,7 @@ from dependencies import (
     ExistentialDependency,
 )
 from adjacency_matrix import AdjacencyMatrix
+from constraint_logic import check_temporal_relationship, check_existential_relationship
 
 
 def satisfies_existential_constraints(
@@ -34,22 +35,8 @@ def satisfies_existential_constraints(
             in_subset_aj = aj in subset
             dep_type = dependency.type
 
-            if dep_type == ExistentialType.IMPLICATION:
-                if in_subset_ai and not in_subset_aj:
-                    return False
-            elif dep_type == ExistentialType.EQUIVALENCE:
-                if in_subset_ai != in_subset_aj:
-                    return False
-            elif dep_type == ExistentialType.NEGATED_EQUIVALENCE:
-                if in_subset_ai == in_subset_aj:
-                    return False
-            elif dep_type == ExistentialType.NAND:
-                if in_subset_ai and in_subset_aj:
-                    return False
-            elif dep_type == ExistentialType.OR:
-                if not (in_subset_ai or in_subset_aj):
-                    return False
-            # INDEPENDENCE is handled by the continue above
+            if not check_existential_relationship(in_subset_ai, in_subset_aj, dep_type):
+                return False
 
     return True
 
@@ -91,13 +78,8 @@ def satisfies_temporal_constraints(
             pos_aj = activity_to_pos[aj]
             dep_type = dependency.type
 
-            if dep_type == TemporalType.DIRECT:
-                if pos_aj != pos_ai + 1:
-                    return False
-            elif dep_type == TemporalType.EVENTUAL:
-                if pos_ai >= pos_aj:
-                    return False
-            # INDEPENDENCE is handled by the continue
+            if not check_temporal_relationship(pos_ai, pos_aj, dep_type):
+                return False
 
     return True
 

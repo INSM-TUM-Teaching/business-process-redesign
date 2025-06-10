@@ -8,6 +8,12 @@ from dependencies import (
     TemporalType,
     ExistentialType,
 )
+from constraint_logic import (
+    evaluate_implication,
+    evaluate_negated_equivalence,
+    is_directly_follows,
+    is_eventually_follows,
+)
 
 
 class InferredDirection(Enum):
@@ -47,7 +53,7 @@ def check_single_trace_temporal_relations(
         for i in range(len(from_positions)):
             for j in range(i + 1, len(from_positions)):
                 pos1, pos2 = from_positions[i], from_positions[j]
-                pattern = InferredTemporalPattern.DIRECT if pos2 - pos1 == 1 else InferredTemporalPattern.EVENTUAL
+                pattern = InferredTemporalPattern.DIRECT if is_directly_follows(pos1, pos2) else InferredTemporalPattern.EVENTUAL
                 relations.append((pattern, InferredDirection.FORWARD))
         return relations
 
@@ -56,13 +62,13 @@ def check_single_trace_temporal_relations(
         pos_f = from_positions[from_idx]
         pos_t = to_positions[to_idx]
 
-        if pos_f < pos_t:  # from_activity instance before to_activity instance
-            pattern = InferredTemporalPattern.DIRECT if pos_t - pos_f == 1 else InferredTemporalPattern.EVENTUAL
+        if is_eventually_follows(pos_f, pos_t): # from_activity instance before to_activity instance
+            pattern = InferredTemporalPattern.DIRECT if is_directly_follows(pos_f, pos_t) else InferredTemporalPattern.EVENTUAL
             relations.append((pattern, InferredDirection.FORWARD))
             from_idx += 1
             to_idx += 1  # Both pointers advance
-        elif pos_f > pos_t:  # to_activity instance before from_activity instance
-            pattern = InferredTemporalPattern.DIRECT if pos_f - pos_t == 1 else InferredTemporalPattern.EVENTUAL
+        elif is_eventually_follows(pos_t, pos_f):  # to_activity instance before from_activity instance
+            pattern = InferredTemporalPattern.DIRECT if is_directly_follows(pos_t, pos_f) else InferredTemporalPattern.EVENTUAL
             relations.append((pattern, InferredDirection.BACKWARD))
             to_idx += 1  # Only to_pointer advances, current from_instance might relate to later to_instance
         else:  # pos_f == pos_t. Should not happen if from_activity != to_activity.
@@ -167,15 +173,22 @@ def has_implication(
     if total_traces == 0:
         return threshold == 0.0
 
-    valid_traces_for_implication = 0
-    for trace in traces:
-        if from_activity in trace:
-            if to_activity in trace:
-                valid_traces_for_implication += 1
-        else:
-            valid_traces_for_implication += 1
+    traces_where_antecedent_present = 0
+    valid_implications = 0
 
-    calculated_ratio = valid_traces_for_implication / total_traces
+    for trace in traces:
+        from_present = from_activity in trace
+        to_present = to_activity in trace
+
+        if from_present:
+            traces_where_antecedent_present += 1
+            if evaluate_implication(from_present, to_present):
+                valid_implications += 1
+
+    if traces_where_antecedent_present == 0:
+        return True
+
+    calculated_ratio = valid_implications / traces_where_antecedent_present
     return calculated_ratio >= threshold
 
 
@@ -201,8 +214,7 @@ def check_negated_equivalence(
     for trace in relevant_traces:
         act1_present = activity1 in trace
         act2_present = activity2 in trace
-        if (act1_present and not act2_present) or \
-           (not act1_present and act2_present):
+        if evaluate_negated_equivalence(act1_present, act2_present):
             valid_for_neg_equiv_count += 1
 
     calculated_ratio = valid_for_neg_equiv_count / len(relevant_traces)
