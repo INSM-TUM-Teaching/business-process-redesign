@@ -95,7 +95,7 @@ def test_infer_temporal_dependency_independence():
     assert infer_temporal_dependency("A", "C", traces, 1.0) is None
 
 
-def test_traces_to_adj_matrix_simple_sequence():
+def test_traces_to_adj_matrix_simple_variant():
     traces = [["A", "B", "C"]]
     adj_matrix = traces_to_adjacency_matrix(
         traces, temporal_threshold=1.0, existential_threshold=1.0
