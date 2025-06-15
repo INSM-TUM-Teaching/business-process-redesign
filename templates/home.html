@@ -1,5 +1,259 @@
 {% extends 'base.html' %}
 
+{% block title %}Business Process Redesign Tool{% endblock %}
+
 {% block content %}
-    <h1>{% block title %} hemlo {% endblock %}</h1>
+<div class="placeholder-note">
+    <strong>Note:</strong> Features marked with a red asterisk (*) are UI placeholders for functionality that exists in the codebase but is not yet connected to the web interface.
+</div>
+
+<!-- Tab Navigation -->
+<div class="tabs">
+    <button class="tab active" onclick="showTab('trace-analysis')">Trace Analysis</button>
+    <button class="tab" onclick="showTab('matrix-view')">Dependency Matrix</button>
+    <button class="tab" onclick="showTab('process-redesign')">Process Redesign</button>
+    <button class="tab" onclick="showTab('change-operations')">Change Operations</button>
+</div>
+
+<!-- Trace Analysis Tab -->
+<div id="trace-analysis" class="tab-content active">
+    <div class="container">
+        <h2 class="section-title">Process Trace Analysis</h2>
+        
+        <div class="grid grid-2">
+            <div class="card">
+                <h3 class="card-title">Input Process Traces</h3>
+                <div class="form-group">
+                    <label class="form-label">Enter process traces (one per line, activities separated by commas):</label>
+                    <textarea class="form-control textarea" id="traces-input" placeholder="A,B,C,D&#10;A,C,B,D&#10;A,B,D&#10;B,A,C,D">A,B,C,D
+A,C,B,D
+A,B,D
+B,A,C,D</textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Temporal Threshold: <span class="threshold-value" id="temporal-threshold-value">1.0</span></label>
+                    <input type="range" class="threshold-slider" id="temporal-threshold" min="0" max="1" step="0.1" value="1.0" oninput="updateThreshold('temporal')">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Existential Threshold: <span class="threshold-value" id="existential-threshold-value">1.0</span></label>
+                    <input type="range" class="threshold-slider" id="existential-threshold" min="0" max="1" step="0.1" value="1.0" oninput="updateThreshold('existential')">
+                </div>
+                
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="analyzeTraces()">Analyze Traces</button>
+                    <button class="btn btn-secondary" onclick="loadSampleData()">Load Sample Data</button>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3 class="card-title">Analysis Results</h3>
+                <div id="analysis-results">
+                    <div class="alert alert-info">
+                        Enter process traces and click "Analyze Traces" to see dependency analysis results.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Matrix View Tab -->
+<div id="matrix-view" class="tab-content">
+    <div class="container">
+        <h2 class="section-title">Dependency Matrix Visualization</h2>
+        
+        <div class="grid grid-2">
+            <div class="card">
+                <h3 class="card-title">Matrix Controls</h3>
+                <div class="form-group">
+                    <label class="form-label">Matrix Format:</label>
+                    <select class="form-control" id="matrix-format">
+                        <option value="adjacency">Adjacency Matrix</option>
+                        <option value="yaml" class="placeholder">YAML Export</option>
+                        <option value="json" class="placeholder">JSON Export</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Display Options:</label>
+                    <div style="margin-top: 0.5rem;">
+                        <label><input type="checkbox" id="show-temporal" checked> Show Temporal Dependencies</label><br>
+                        <label><input type="checkbox" id="show-existential" checked> Show Existential Dependencies</label><br>
+                        <label><input type="checkbox" id="show-weights" class="placeholder"> Show Dependency Weights</label>
+                    </div>
+                </div>
+                
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="generateMatrix()">Generate Matrix</button>
+                    <button class="btn btn-secondary placeholder" onclick="exportMatrix()">Export Matrix</button>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3 class="card-title">Matrix Display</h3>
+                <div class="matrix-display" id="matrix-display">
+                    <div class="alert alert-info">
+                        Generate a matrix from trace analysis to view dependencies here.
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="container">
+            <h3 class="section-title">Dependency Details</h3>
+            <div id="dependency-details">
+                <div class="alert alert-info">
+                    Matrix dependencies will be listed here with detailed explanations.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Process Redesign Tab -->
+<div id="process-redesign" class="tab-content">
+    <div class="container">
+        <h2 class="section-title">Process Redesign & Acceptance Variants</h2>
+        
+        <div class="grid grid-2">
+            <div class="card">
+                <h3 class="card-title">Redesign Configuration</h3>
+                <div class="form-group">
+                    <label class="form-label">Target Activities for Redesign:</label>
+                    <input type="text" class="form-control" id="target-activities" placeholder="A,B,C">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Redesign Strategy:</label>
+                    <select class="form-control placeholder" id="redesign-strategy">
+                        <option value="optimize">Optimize Dependencies</option>
+                        <option value="parallelize">Parallelize Activities</option>
+                        <option value="eliminate">Eliminate Redundancies</option>
+                        <option value="reorder">Reorder Sequence</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Constraint Preservation:</label>
+                    <div style="margin-top: 0.5rem;">
+                        <label><input type="checkbox" id="preserve-temporal" checked class="placeholder"> Preserve Temporal Constraints</label><br>
+                        <label><input type="checkbox" id="preserve-existential" checked class="placeholder"> Preserve Existential Constraints</label><br>
+                        <label><input type="checkbox" id="allow-violations" class="placeholder"> Allow Minor Violations</label>
+                    </div>
+                </div>
+                
+                <div class="btn-group">
+                    <button class="btn btn-primary placeholder" onclick="generateVariants()">Generate Acceptance Variants</button>
+                    <button class="btn btn-secondary placeholder" onclick="validateVariants()">Validate Variants</button>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3 class="card-title">Generated Variants</h3>
+                <div id="acceptance-variants">
+                    <div class="alert alert-info">
+                        Configure redesign parameters and generate acceptance variants to see results here.
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="container">
+            <h3 class="section-title placeholder">Variant Comparison</h3>
+            <div class="grid grid-3">
+                <div class="card">
+                    <h4 class="card-title placeholder">Performance Metrics</h4>
+                    <canvas id="performance-chart" width="300" height="200"></canvas>
+                </div>
+                <div class="card">
+                    <h4 class="card-title placeholder">Constraint Violations</h4>
+                    <div id="violation-summary">
+                        <div class="alert alert-info">Performance analysis will appear here.</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h4 class="card-title placeholder">Recommendation Score</h4>
+                    <div id="recommendation-score">
+                        <div class="alert alert-info">Recommendation scoring will appear here.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Change Operations Tab -->
+<div id="change-operations" class="tab-content">
+    <div class="container">
+        <h2 class="section-title">Change Operations</h2>
+        
+        <div class="grid grid-2">
+            <div class="card">
+                <h3 class="card-title">Available Operations</h3>
+                <div class="form-group">
+                    <label class="form-label">Operation Type:</label>
+                    <select class="form-control" id="operation-type" onchange="updateOperationForm()">
+                        <option value="delete">Delete Activity</option>
+                        <option value="insert" class="placeholder">Insert Activity</option>
+                        <option value="move" class="placeholder">Move Activity</option>
+                        <option value="swap" class="placeholder">Swap Activities</option>
+                        <option value="parallel" class="placeholder">Parallelize Activities</option>
+                    </select>
+                </div>
+                
+                <div id="operation-form">
+                    <div class="form-group">
+                        <label class="form-label">Target Activity:</label>
+                        <input type="text" class="form-control" id="target-activity" placeholder="Activity to delete">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Preserve Dependencies:</label>
+                        <div style="margin-top: 0.5rem;">
+                            <label><input type="checkbox" id="preserve-incoming" checked> Preserve Incoming Dependencies</label><br>
+                            <label><input type="checkbox" id="preserve-outgoing" checked> Preserve Outgoing Dependencies</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="applyOperation()">Apply Operation</button>
+                    <button class="btn btn-secondary placeholder" onclick="previewOperation()">Preview Changes</button>
+                    <button class="btn btn-warning placeholder" onclick="undoOperation()">Undo Last Operation</button>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3 class="card-title">Operation History</h3>
+                <div id="operation-history">
+                    <div class="alert alert-info">
+                        Applied operations will be tracked here.
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="container">
+            <h3 class="section-title">Impact Analysis</h3>
+            <div class="grid grid-2">
+                <div class="card">
+                    <h4 class="card-title">Before Operation</h4>
+                    <div class="matrix-display" id="before-matrix">
+                        <div class="alert alert-info">Original matrix will be shown here.</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h4 class="card-title">After Operation</h4>
+                    <div class="matrix-display" id="after-matrix">
+                        <div class="alert alert-info">Modified matrix will be shown here.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 {% endblock %}

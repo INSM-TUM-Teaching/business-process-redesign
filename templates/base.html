@@ -1,19 +1,23 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
     <head>
         <meta charset="utf-8" />
-        <title>{% block title %}{% endblock %}</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{% block title %}Business Process Redesign Tool{% endblock %}</title>
         <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='site.css')}}" />
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     </head>
 
     <body>
-        <div class="navbar">
-            <a href="{{ url_for('home') }}" class="navbar-brand">Home</a>
-        </div>
+        <nav class="navbar">
+            <a href="{{ url_for('home') }}" class="navbar-brand">Business Process Redesign</a>
+        </nav>
 
-        <div class="body-content">
+        <main class="body-content">
             {% block content %}
             {% endblock %}
-        </div>
+        </main>
+
+        <script src="{{ url_for('static', filename='app.js') }}"></script>
     </body>
 </html>
