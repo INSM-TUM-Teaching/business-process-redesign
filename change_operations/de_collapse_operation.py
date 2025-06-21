@@ -1,0 +1,78 @@
+from typing import List, Set
+from adjacency_matrix import AdjacencyMatrix
+from acceptance_variants import generate_acceptance_variants
+from traces_to_matrix import traces_to_adjacency_matrix
+from dependencies import ExistentialType
+
+def decollapse_variant_level(main_variants: List[List[str]], collapsed_activity: str, collapsed_variants: List[List[str]]) -> List[List[str]]:
+    """
+    Adds the variants of collapsed activities at the correct position in the main_variants
+    
+    Args:
+        main_variants: List of variants to main process (process in which collapsed activity is)
+        collapsed_activity: Activity which is currently collapsed and should now be de-collapsed
+        collapsed_variants: variants of the currently collapsed activity 
+        
+    Returns:
+        New variants with the activity de-collapsed, without duplicates 
+    """
+    modified_variants = []
+    seen = set()
+    
+    for variant in main_variants:
+        if collapsed_activity in variant:
+            # The activity needs to be de-collapsed - insert all possible variants in the variant at the position of the collapsed activity 
+            index = variant.index(collapsed_activity)
+            for collapsed_variant in collapsed_variants:
+                modified_variant = variant[:index] + collapsed_variant + variant[index+1:]
+                variants_to_add.append(modified_variant)
+        
+        else:
+            # Activity not in variant, keep as is
+            variants_to_add = [variant]
+
+        for var in variants_to_add:
+            if var:  # Only add non-empty variants
+                variant_tuple = tuple(var)
+                if variant_tuple not in seen:
+                    seen.add(variant_tuple)
+                    modified_variants.append(var)
+                       
+    return modified_variants
+
+
+def decollapse_operation(main_matrix: AdjacencyMatrix, collapsed_activity: str, collapsed_matrix) -> AdjacencyMatrix:
+    """
+    Decollapses an activity which is currently collapsed 
+    1. Checking that collapsed activity is part of the process 
+    2. For collapsed activity create all possible acceptance seqeunces
+    3. For each variant of main process in wich the activity to de-collapse is included, insert at the position 
+        of the activity the acceptance sequence of the collapsed one 
+    
+    Args:
+        main_matrix: The input adjacency matrix
+        collapsed_activity: The name of the activity which is currently collapsed and should be de-collapsed 
+        collapsed_matrix: The adjacency matrix of the activity which is currently collapsed 
+        
+    Returns:
+        A new adjacency matrix with the activity decollapsed
+        
+    Raises:
+        ValueError: If activity not found
+    """
+
+    if collapsed_activity not in main_matrix.activities:
+        raise ValueError(f"Activity {collapsed_activity} not found in matrix")
+        
+    # Generate variants from input matrix
+    variants = generate_acceptance_variants(main_matrix)
+    
+    # Remove activity from variants
+    modified_variants = decollapse_variant_level()
+    
+        
+    # Convert modified variants back to matrix
+    new_matrix = traces_to_adjacency_matrix(modified_variants, 1.0, 1.0)
+    
+    return new_matrix
+
