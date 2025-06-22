@@ -1,3 +1,4 @@
+from typing import Tuple, Dict
 import pytest
 from adjacency_matrix import AdjacencyMatrix
 from dependencies import (
@@ -6,9 +7,9 @@ from dependencies import (
     TemporalType,
     ExistentialType,
 )
-from change_operations.insert_operation import insert_activity
+from change_operations.insert_operation import insert_activity, determine_set_before, determine_set_after
 
-#What is intendet behaviour for this?:
+
 def test_insert_activity_direct_temp():
     matrix = AdjacencyMatrix(activities=["A", "B"])
     matrix.add_dependency(
@@ -54,7 +55,7 @@ def test_insert_activity_direct_temp():
         ("A", "C"): (TemporalDependency(TemporalType.DIRECT), ExistentialDependency(ExistentialType.EQUIVALENCE))}) == expected_result_matrix
 
 
-def test_insert_activity():
+def test_insert_activity_end():
     matrix = AdjacencyMatrix(activities=["A", "B"])
     matrix.add_dependency(
         "A", "B",
@@ -100,11 +101,26 @@ def test_insert_activity():
 
 
 def test_insert_in_empty_process():
-    # Create matrix with A->B where A and B are equivalent
+    # Create empty matrix
     matrix = AdjacencyMatrix(activities=[])
     
+    # Create result with activity in it
     expected_result_matrix = AdjacencyMatrix(activities=["A"])
-    # Deleting either A or B should fail as it would result in empty process
-    # due to equivalence relationship
     
     assert insert_activity(matrix, "A", {}) == expected_result_matrix
+
+def test_determine_set_before():
+    temporal_deps: Dict[Tuple[str, str], TemporalDependency] = {}
+    temporal_deps[("A", "B")] = TemporalDependency(TemporalType.DIRECT)
+    temporal_deps[("B", "C")] = TemporalDependency(TemporalType.DIRECT)
+    temporal_deps[("C", "D")] = TemporalDependency(TemporalType.EVENTUAL)
+    temporal_deps[("E", "D")] = TemporalDependency(TemporalType.INDEPENDENCE)
+    assert determine_set_before(temporal_deps, "C", set()) == set(["A", "B"])
+
+def test_determine_set_after():
+    temporal_deps: Dict[Tuple[str, str], TemporalDependency] = {}
+    temporal_deps[("A", "B")] = TemporalDependency(TemporalType.DIRECT)
+    temporal_deps[("B", "C")] = TemporalDependency(TemporalType.DIRECT)
+    temporal_deps[("C", "D")] = TemporalDependency(TemporalType.EVENTUAL)
+    temporal_deps[("E", "D")] = TemporalDependency(TemporalType.INDEPENDENCE)
+    assert determine_set_after(temporal_deps, "A", set()) == set(["C", "B", "D"])
