@@ -18,6 +18,9 @@ from traces_to_matrix import traces_to_adjacency_matrix
 def has_existential_contradiction(
     existential_deps: Dict[Tuple[str, str], ExistentialDependency],
 ) -> bool:
+    """
+    Checks if existential dependencies have contradictions.
+    """
     solver = Solver()
     variables = {}
 
@@ -56,6 +59,26 @@ def has_existential_contradiction(
     return not (result == sat)
 
 
+def dfs(
+    temporal_deps: Dict[Tuple[str, str], TemporalDependency],
+    cur_activity: str,
+    visited: Set[str]
+):
+    """
+    Depth first search returning all activities which have to happen before given activity
+    """
+    for temporal_dep in temporal_deps:
+        if temporal_deps.get(temporal_dep).type == TemporalType.INDEPENDENCE:
+            continue
+        (before, after) = temporal_dep
+        if after == cur_activity:
+            if before in visited:
+                raise RecursionError
+            visited.add(before)
+            visited = visited | dfs(temporal_deps, before, visited)
+    return visited
+
+
 def has_temporal_contradiction(
     temporal_deps: Dict[Tuple[str, str], TemporalDependency],
     activities: List[str],
@@ -71,7 +94,6 @@ def has_temporal_contradiction(
     after = set()
     before = set()
     for source, target in temporal_deps:
-        print(source, target)
         if temporal_deps.get((source, target)).type != TemporalType.DIRECT:
             continue
         if target == activity:
@@ -101,13 +123,11 @@ def has_temporal_contradiction(
         if (a_pos != -1) and (b_pos != -1):
             if a_pos != (b_pos + 1):
                 return True
-
     # Check for loops
     try:
         for a in activities:
-            determine_set_before(temporal_deps, a)
-            determine_set_after(temporal_deps, a)
-    except:
+            dfs(temporal_deps, a, set())
+    except RecursionError:
         return True
 
     return False
@@ -123,6 +143,20 @@ def is_valid_input(
         Tuple[Optional[TemporalDependency], Optional[ExistentialDependency]],
     ],
 ) -> bool:
+    """
+    Checks if input is valid
+
+    Args:
+        matrix: The input adjacency matrix.
+        activities: All activities in matrix and activity to be inserted.
+        activity: The name of the activity to insert.
+        variants: All variants reslting from matrix.
+        dependencies: The dependencies defining the position of the activity to be inserted.
+
+    Returns:
+        True: If input is valid
+        False: If input is invalid
+    """
     total_temporal_deps: Dict[Tuple[str, str], TemporalDependency] = {}
     total_existential_deps: Dict[Tuple[str, str], ExistentialDependency] = {}
 
@@ -141,46 +175,22 @@ def is_valid_input(
     return True
 
 
-def determine_set_before(
-    temporal_deps: Dict[Tuple[str, str], TemporalDependency],
-    cur_activity: str,
-    cur_activities_before: Set[str] = set(),
-):
-    # Use dictionary to save what was already done
-    for temporal_dep in temporal_deps:
-        if temporal_deps.get(temporal_dep).type == TemporalType.INDEPENDENCE:
-            continue
-        (before, after) = temporal_dep
-        if after == cur_activity:
-            cur_activities_before.add(before)
-            cur_activities_before = cur_activities_before | determine_set_before(
-                temporal_deps, before, cur_activities_before
-            )
-    return cur_activities_before
-
-
-def determine_set_after(
-    temporal_deps, cur_activity, cur_activities_after: Set[str] = set()
-):
-    # Use dictionary to save what was already done
-    for temporal_dep in temporal_deps:
-        if temporal_deps.get(temporal_dep).type == TemporalType.INDEPENDENCE:
-            continue
-        (before, after) = temporal_dep
-        if before == cur_activity:
-            cur_activities_after.add(after)
-            cur_activities_after = cur_activities_after | determine_set_after(
-                temporal_deps, after, cur_activities_after
-            )
-    return cur_activities_after
-
-
 def search_valid_positions_to_insert(
     variant: List[str],
     activity: str,
     temporal_deps: Dict[Tuple[str, str], TemporalDependency],
 ) -> List[List[str]]:
+    """
+    Searches all options where activity can be inserted according to temporal dependencies.
 
+    Args:
+        variant: variant in which activity shall be inserted
+        activity: The name of the activity to insert.
+        temporal_dependeps: The temporal dependencies defining the position of the activity to be inserted.
+
+    Returns:
+        List of new variants according to temporal dependencies
+    """
     new_variants: List[List[str]] = []
 
     # Insert at any position and check if temporals are fullfilled

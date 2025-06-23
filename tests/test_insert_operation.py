@@ -9,8 +9,6 @@ from dependencies import (
 )
 from change_operations.insert_operation import (
     insert_activity,
-    determine_set_before,
-    determine_set_after,
     has_existential_contradiction,
     has_temporal_contradiction
     )
@@ -114,22 +112,6 @@ def test_insert_in_empty_process():
     expected_result_matrix = AdjacencyMatrix(activities=["A"])
     
     assert insert_activity(matrix, "A", {}) == expected_result_matrix
-
-def test_determine_set_before():
-    temporal_deps: Dict[Tuple[str, str], TemporalDependency] = {}
-    temporal_deps[("A", "B")] = TemporalDependency(TemporalType.DIRECT)
-    temporal_deps[("B", "C")] = TemporalDependency(TemporalType.DIRECT)
-    temporal_deps[("C", "D")] = TemporalDependency(TemporalType.EVENTUAL)
-    temporal_deps[("E", "D")] = TemporalDependency(TemporalType.INDEPENDENCE)
-    assert determine_set_before(temporal_deps, "C", set()) == set(["A", "B"])
-
-def test_determine_set_after():
-    temporal_deps: Dict[Tuple[str, str], TemporalDependency] = {}
-    temporal_deps[("A", "B")] = TemporalDependency(TemporalType.DIRECT)
-    temporal_deps[("B", "C")] = TemporalDependency(TemporalType.DIRECT)
-    temporal_deps[("C", "D")] = TemporalDependency(TemporalType.EVENTUAL)
-    temporal_deps[("E", "D")] = TemporalDependency(TemporalType.INDEPENDENCE)
-    assert determine_set_after(temporal_deps, "A", set()) == set(["C", "B", "D"])
 
 def test_has_existential_contradiction():
     deps = {
