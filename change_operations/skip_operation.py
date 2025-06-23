@@ -10,11 +10,9 @@ def skip_activity_in_variants(variants: List[List[str]], optional_activity: str)
     
     Args:
         variants: List of variants to process
-        activity: Activity to remove from all variants
-        remove_duplicates: If True, removes duplicate variants after removing the activity
-        
+        optional_activity: Activity which becomes optional in the process 
     Returns:
-        New variants with the activity removed, with or without duplicates based on remove_duplicates
+        New variants with the activity now being optional
     """
     modified_variants = []
     seen = set()
