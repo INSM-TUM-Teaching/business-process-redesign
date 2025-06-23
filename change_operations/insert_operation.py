@@ -10,6 +10,7 @@ from adjacency_matrix import AdjacencyMatrix
 from acceptance_variants import (
     generate_acceptance_variants,
     satisfies_existential_constraints,
+    satisfies_temporal_constraints,
 )
 from traces_to_matrix import traces_to_adjacency_matrix
 
@@ -55,7 +56,12 @@ def has_existential_contradiction(
     return not (result == sat)
 
 
-def has_temporal_contradiction(temporal_deps, activities, activity, variants):
+def has_temporal_contradiction(
+    temporal_deps: Dict[Tuple[str, str], TemporalDependency],
+    activities: List[str],
+    activity: str,
+    variants: List[List[str]],
+):
     """
     Checks if temporal ordering has contradictions. Handles direct as eventual temporal dependencies, since insert might change it.
     """
@@ -64,18 +70,18 @@ def has_temporal_contradiction(temporal_deps, activities, activity, variants):
 
     after = set()
     before = set()
-    for (source, target) in temporal_deps:
-        print(source,target)
+    for source, target in temporal_deps:
+        print(source, target)
         if temporal_deps.get((source, target)).type != TemporalType.DIRECT:
             continue
         if target == activity:
             before.add(source)
         if source == activity:
             after.add(target)
-    
+
     for variant in variants:
-        #check if there is max 1 before and max 1 after in each variant
-        #check if nothing between before and after
+        # check if there is max 1 before and max 1 after in each variant
+        # check if nothing between before and after
         n = 0
         b_pos = -1
         for b in before:
@@ -83,7 +89,6 @@ def has_temporal_contradiction(temporal_deps, activities, activity, variants):
                 b_pos = variant.index(b)
                 n += 1
             if n > 1:
-                print("too many bs")
                 return True
         n = 0
         a_pos = -1
@@ -92,15 +97,12 @@ def has_temporal_contradiction(temporal_deps, activities, activity, variants):
                 a_pos = variant.index(a)
                 n += 1
             if n > 1:
-                print("too many as")
                 return True
         if (a_pos != -1) and (b_pos != -1):
             if a_pos != (b_pos + 1):
-                print(variant)
-                print("something between a and b")
                 return True
 
-    # Check for ordering contradictions
+    # Check for loops
     try:
         for a in activities:
             determine_set_before(temporal_deps, a)
@@ -116,14 +118,25 @@ def is_valid_input(
     activities,
     activity: str,
     variants: List[List[str]],
-    temporal_deps: Dict[Tuple[str, str], TemporalDependency] = {},
-    existential_deps: Dict[Tuple[str, str], ExistentialDependency] = {},
+    total_dependencies: Dict[
+        Tuple[str, str],
+        Tuple[Optional[TemporalDependency], Optional[ExistentialDependency]],
+    ],
 ) -> bool:
+    total_temporal_deps: Dict[Tuple[str, str], TemporalDependency] = {}
+    total_existential_deps: Dict[Tuple[str, str], ExistentialDependency] = {}
+
+    for (source, target), (temp_dep, exist_dep) in total_dependencies.items():
+        if temp_dep:
+            total_temporal_deps[(source, target)] = temp_dep
+        if exist_dep:
+            total_existential_deps[(source, target)] = exist_dep
+
     if activity in matrix.get_activities():
         return False
-    if has_existential_contradiction(existential_deps):
+    if has_existential_contradiction(total_existential_deps):
         return False
-    if has_temporal_contradiction(temporal_deps, activities, activity, variants):
+    if has_temporal_contradiction(total_temporal_deps, activities, activity, variants):
         return False
     return True
 
@@ -133,7 +146,7 @@ def determine_set_before(
     cur_activity: str,
     cur_activities_before: Set[str] = set(),
 ):
-    #Use dictionary to save what was already done
+    # Use dictionary to save what was already done
     for temporal_dep in temporal_deps:
         if temporal_deps.get(temporal_dep).type == TemporalType.INDEPENDENCE:
             continue
@@ -149,7 +162,7 @@ def determine_set_before(
 def determine_set_after(
     temporal_deps, cur_activity, cur_activities_after: Set[str] = set()
 ):
-    #Use dictionary to save what was already done
+    # Use dictionary to save what was already done
     for temporal_dep in temporal_deps:
         if temporal_deps.get(temporal_dep).type == TemporalType.INDEPENDENCE:
             continue
@@ -165,45 +178,18 @@ def determine_set_after(
 def search_valid_positions_to_insert(
     variant: List[str],
     activity: str,
-    activities_before,
-    activities_after,
-    direct_before,
-    direct_after,
+    temporal_deps: Dict[Tuple[str, str], TemporalDependency],
 ) -> List[List[str]]:
-    variants: List[List[str]] = []
 
-    # Check if there exists activity which has direct temporal relation
-    for a in direct_before:
-        if a in variant:
-            pos_before = variant.index(a)
-            new_variant = variant.copy()
-            new_variant.insert(pos_before + 1, activity)
-            variants.append(new_variant)
-            return variants
-    for a in direct_after:
-        if a in variant:
-            pos_after = variant.index(a)
-            new_variant = variant.copy()
-            new_variant.insert(pos_after, activity)
-            variants.append(new_variant)
-            return variants
+    new_variants: List[List[str]] = []
 
-    # Insert depending on set before and after
-    for a in reversed(variant):
-        if a in activities_before:
-            pos_last_before = variant.index(a)
-            new_variant = variant.copy()
-            new_variant.insert(pos_last_before + 1, activity)
-            variants.append(new_variant)
-            break
-    for a in variant:
-        if a in activities_after:
-            pos_first_after = variant.index(a)
-            new_variant = variant.copy()
-            new_variant.insert(pos_first_after, activity)
-            variants.append(new_variant)
-            break
-    return variants
+    # Insert at any position and check if temporals are fullfilled
+    for pos in range(len(variant) + 1):
+        new_variant = variant.copy()
+        new_variant.insert(pos, activity)
+        if satisfies_temporal_constraints(new_variant, temporal_deps):
+            new_variants.append(new_variant.copy())
+    return new_variants
 
 
 def insert_activity(
@@ -233,21 +219,20 @@ def insert_activity(
     Raises:
         ValueError: If input is produces contradiction
     """
-    print("Start insert")
+    variants = generate_acceptance_variants(matrix)
 
-    total_temporal_deps: Dict[Tuple[str, str], TemporalDependency] = {}
-    total_existential_deps: Dict[Tuple[str, str], ExistentialDependency] = {}
-
-    temporal_deps: Dict[Tuple[str, str], TemporalDependency] = {}
-    existential_deps: Dict[Tuple[str, str], ExistentialDependency] = {}
+    new_activities = matrix.get_activities().copy()
+    new_activities.append(activity)
 
     total_dependencies = matrix.get_dependencies() | dependencies
 
-    for (source, target), (temp_dep, exist_dep) in total_dependencies.items():
-        if temp_dep:
-            total_temporal_deps[(source, target)] = temp_dep
-        if exist_dep:
-            total_existential_deps[(source, target)] = exist_dep
+    if not is_valid_input(
+        matrix, new_activities, activity, variants, total_dependencies
+    ):
+        raise ValueError("The input is invalid.")
+
+    temporal_deps: Dict[Tuple[str, str], TemporalDependency] = {}
+    existential_deps: Dict[Tuple[str, str], ExistentialDependency] = {}
 
     for (source, target), (temp_dep, exist_dep) in dependencies.items():
         if temp_dep:
@@ -255,33 +240,10 @@ def insert_activity(
         if exist_dep:
             existential_deps[(source, target)] = exist_dep
 
-    variants = generate_acceptance_variants(matrix)
-    new_activities = matrix.get_activities().copy()
-    new_activities.append(activity)
-
-    if not is_valid_input(
-        matrix, new_activities, activity, variants, total_temporal_deps, total_existential_deps
-    ):
-        raise ValueError("The input is invalid.")
-
-    activities_before = determine_set_before(total_temporal_deps, activity)
-    activities_after = determine_set_after(total_temporal_deps, activity)
-
-    direct_before = []
-    direct_after = []
-
-    for dependency in temporal_deps:
-        if temporal_deps.get(dependency).type == TemporalType.DIRECT:
-            (before, after) = dependency
-            if activity == before:
-                direct_after.append(after)
-            if activity == after:
-                direct_before.append(before)
-
     new_variants = []
 
     if satisfies_existential_constraints(
-        set(activity), new_activities, total_existential_deps
+        set(activity), new_activities, existential_deps
     ):
         new_variants.append([activity])
 
@@ -297,12 +259,7 @@ def insert_activity(
         ):
             continue
         valid_variants = search_valid_positions_to_insert(
-            variant,
-            activity,
-            activities_before,
-            activities_after,
-            direct_before,
-            direct_after,
+            variant, activity, temporal_deps
         )
         new_variants.extend(valid_variants)
 

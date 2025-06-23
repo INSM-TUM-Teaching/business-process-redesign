@@ -103,7 +103,7 @@ def test_insert_activity_end():
     
     
     assert insert_activity(matrix, "C", {
-        ("B", "C"): (TemporalDependency(TemporalType.DIRECT), ExistentialDependency(ExistentialType.EQUIVALENCE))}) == expected_result_matrix
+        ("B", "C"): (TemporalDependency(TemporalType.EVENTUAL), ExistentialDependency(ExistentialType.EQUIVALENCE))}) == expected_result_matrix
 
 
 def test_insert_in_empty_process():
