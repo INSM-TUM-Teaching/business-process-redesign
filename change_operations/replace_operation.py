@@ -40,8 +40,8 @@ def replace_activity(matrix: AdjacencyMatrix, activity_to_replace: str, active_t
     new_matrix = AdjacencyMatrix(activities) 
     new_dependencies = {}
     for (from_act, to_act), (temporal_dep, existential_dep) in dependencies.items():
-        updated_from = active_to_insert if from_act == activity_to_replace else from_act
-        updated_to = active_to_insert if to_act == activity_to_replace else to_act
+        updated_from = active_to_insert if from_act == activity_to_replace else updated_from = from_act
+        updated_to = active_to_insert if to_act == activity_to_replace else updated_to = to_act
         new_matrix.add_dependency(updated_from, updated_to, temporal_dep, existential_dep)
 
     return new_matrix

@@ -6,15 +6,15 @@ from dependencies import ExistentialType
 
 def condition_update_in_variants(variants: List[List[str]], condition_activity: str, depending_activity: str) -> List[List[str]]:
     """
-    Removes the specified activity from all acceptance variants.
+    Makes an activity in variants depending on other activity
     
     Args:
         variants: List of variants to process
-        activity: Activity to remove from all variants
-        remove_duplicates: If True, removes duplicate variants after removing the activity
+        condition_activity: Activity that determines if other activity occurs 
+        depending_activity: Activity which depends on other activity
         
     Returns:
-        New variants with the activity removed, with or without duplicates based on remove_duplicates
+        New variants with the depending_activity now depending on condition_activity
     """
     modified_variants = []
     seen = set()
