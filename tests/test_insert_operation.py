@@ -7,7 +7,13 @@ from dependencies import (
     TemporalType,
     ExistentialType,
 )
-from change_operations.insert_operation import insert_activity, determine_set_before, determine_set_after
+from change_operations.insert_operation import (
+    insert_activity,
+    determine_set_before,
+    determine_set_after,
+    has_existential_contradiction,
+    has_temporal_contradiction
+    )
 
 
 def test_insert_activity_direct_temp():
@@ -124,3 +130,26 @@ def test_determine_set_after():
     temporal_deps[("C", "D")] = TemporalDependency(TemporalType.EVENTUAL)
     temporal_deps[("E", "D")] = TemporalDependency(TemporalType.INDEPENDENCE)
     assert determine_set_after(temporal_deps, "A", set()) == set(["C", "B", "D"])
+
+def test_has_existential_contradiction():
+    deps = {
+        ('A', 'B'): ExistentialDependency(ExistentialType.NEGATED_EQUIVALENCE),
+        ('B', 'C'): ExistentialDependency(ExistentialType.EQUIVALENCE),
+        ('C', 'A'): ExistentialDependency(ExistentialType.EQUIVALENCE),
+    }
+    assert has_existential_contradiction(deps) == True
+    deps = {
+        ('A', 'B'): ExistentialDependency(ExistentialType.EQUIVALENCE),
+        ('B', 'C'): ExistentialDependency(ExistentialType.EQUIVALENCE),
+        ('C', 'A'): ExistentialDependency(ExistentialType.EQUIVALENCE),
+    }
+    assert has_existential_contradiction(deps) == False
+
+def test_has_temporal_contradiction():
+    deps = {
+        ('A', 'B'): TemporalDependency(TemporalType.DIRECT),
+        ('B', 'C'): TemporalDependency(TemporalType.DIRECT),
+        ('C', 'A'): TemporalDependency(TemporalType.DIRECT),
+    }
+    activities = ["A", "B", "C"]
+    assert has_temporal_contradiction(deps, activities, "B", ["A", "B", "C"]) == True
