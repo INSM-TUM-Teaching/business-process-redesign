@@ -18,6 +18,7 @@ def decollapse_variant_level(main_variants: List[List[str]], collapsed_activity:
     """
     modified_variants = []
     seen = set()
+    variants_to_add = []
     
     for variant in main_variants:
         if collapsed_activity in variant:
