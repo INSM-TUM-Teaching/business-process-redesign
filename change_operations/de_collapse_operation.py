@@ -42,7 +42,7 @@ def decollapse_variant_level(main_variants: List[List[str]], collapsed_activity:
     return modified_variants
 
 
-def decollapse_operation(main_matrix: AdjacencyMatrix, collapsed_activity: str, collapsed_matrix) -> AdjacencyMatrix:
+def decollapse_operation(main_matrix: AdjacencyMatrix, collapsed_activity: str, collapsed_matrix: AdjacencyMatrix) -> AdjacencyMatrix:
     """
     Decollapses an activity which is currently collapsed 
     1. Checking that collapsed activity is part of the process 
@@ -67,11 +67,13 @@ def decollapse_operation(main_matrix: AdjacencyMatrix, collapsed_activity: str, 
         
     # Generate variants from input matrix
     variants = generate_acceptance_variants(main_matrix)
+
+    # generate variants of collapsed process 
+    collapsed_variants = generate_acceptance_variants(collapsed_matrix)
     
     # Remove activity from variants
-    modified_variants = decollapse_variant_level()
+    modified_variants = decollapse_variant_level(variants, collapsed_activity, collapsed_variants)
     
-        
     # Convert modified variants back to matrix
     new_matrix = traces_to_adjacency_matrix(modified_variants, 1.0, 1.0)
     
