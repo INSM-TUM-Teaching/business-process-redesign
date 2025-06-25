@@ -81,6 +81,7 @@ def dfs(
 
 def has_temporal_contradiction(
     temporal_deps: Dict[Tuple[str, str], TemporalDependency],
+    existential_deps: Dict[Tuple[str, str], ExistentialDependency],
     activities: List[str],
     activity: str,
     variants: List[List[str]],
@@ -104,6 +105,10 @@ def has_temporal_contradiction(
     for variant in variants:
         # check if there is max 1 before and max 1 after in each variant
         # check if nothing between before and after
+        variant_activities = set(variant)
+        variant_activities.add(activity)
+        if satisfies_existential_constraints(variant_activities, activities, existential_deps):
+            continue
         n = 0
         b_pos = -1
         for b in before:
@@ -121,7 +126,7 @@ def has_temporal_contradiction(
             if n > 1:
                 return True
         if (a_pos != -1) and (b_pos != -1):
-            if a_pos != (b_pos + 1):
+            if (a_pos != (b_pos + 1)):
                 return True
     # Check for loops
     try:
@@ -170,7 +175,7 @@ def is_valid_input(
         return False
     if has_existential_contradiction(total_existential_deps):
         return False
-    if has_temporal_contradiction(total_temporal_deps, activities, activity, variants):
+    if has_temporal_contradiction(total_temporal_deps, total_existential_deps, activities, activity, variants):
         return False
     return True
 

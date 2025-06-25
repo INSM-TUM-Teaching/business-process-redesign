@@ -128,10 +128,11 @@ def test_has_existential_contradiction():
     assert has_existential_contradiction(deps) == False
 
 def test_has_temporal_contradiction():
-    deps = {
+    temporal_deps = {
         ('A', 'B'): TemporalDependency(TemporalType.DIRECT),
         ('B', 'C'): TemporalDependency(TemporalType.DIRECT),
         ('C', 'A'): TemporalDependency(TemporalType.DIRECT),
     }
+    existential_deps = {}
     activities = ["A", "B", "C"]
-    assert has_temporal_contradiction(deps, activities, "B", ["A", "B", "C"]) == True
+    assert has_temporal_contradiction(temporal_deps, existential_deps, activities, "B", ["A", "B", "C"]) == True
