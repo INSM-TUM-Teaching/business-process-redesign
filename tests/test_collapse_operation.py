@@ -33,6 +33,25 @@ def test_collapse_variant_level():
     )
     assert collapse_variant_level(matrix, variants, "X", ["A", "B"]) == [["X", "C"], ["X"]]
 
+def test_collapse_variant_level_error(): 
+    # activity c happends in between, but we ensure it is temporally indepent to other activities 
+    variants = [["A", "B", "C"], ["A", "C", "B"], ["B", "A"], ["B"]]
+    # Create a simple matrix with A->B->C dependencies
+    matrix = AdjacencyMatrix(activities=["A", "B", "C"])
+    matrix.add_dependency(
+        "C", "A",
+        TemporalDependency(TemporalType.EVENTUAL),
+        ExistentialDependency(ExistentialType.IMPLICATION)
+
+    )
+    matrix.add_dependency(
+        "C", "B",
+        TemporalDependency(TemporalType.INDEPENDENCE), 
+        ExistentialDependency(ExistentialType.IMPLICATION)
+
+    )
+    with pytest.raises(ValueError, match="Activity C happens between the activities to be collapsed"):
+        collapse_variant_level(matrix, variants, "X", ["A", "B"])
 
 
 def test_get_unique_elements_between_collapse_activities():
