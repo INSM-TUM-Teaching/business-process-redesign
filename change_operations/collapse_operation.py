@@ -37,7 +37,6 @@ def collapse_variant_level(matrix: AdjacencyMatrix, main_variants: List[List[str
                 if temporal_dep.type != TemporalType.INDEPENDENCE:
                     # then collapsing not possible, problem is that we have activities happening in between 
                     raise ValueError(f"Activity {activity} happens between the activities to be collapsed")
-                # TODO check if that really works like this? to exit function here 
     
         # if we pass this check without raising an error, we can do the actual collapsing 
         return perform_collapse_variant(main_variants, collapsed_activity, collapse_activities)

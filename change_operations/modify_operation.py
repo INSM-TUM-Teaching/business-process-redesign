@@ -11,7 +11,7 @@ from dependencies import (
     ExistentialType,
 )
 
-def add_dependency(
+def modify_dependency(
         matrix: AdjacencyMatrix ,
         from_activity: str,
         to_activity: str,
@@ -38,8 +38,8 @@ def add_dependency(
     """
 
     # modify the name of the activity to be replaced by the newly named activity  
-    activities = matrix.get_activities
-    dependencies = matrix.get_dependencies
+    activities = matrix.get_activities()
+    dependencies = matrix.get_dependencies()
 
     # check that activities are actually part of the matrix 
     if from_activity not in activities:
@@ -52,7 +52,8 @@ def add_dependency(
     # here we must consider the order in which the implication currently is cause the change operation needs to be adapted accoridngly 
     # replace in dict with dependencies 
     new_matrix = AdjacencyMatrix(activities) 
-    new_dependencies = {}
+
+    # iterate over all dependencies which are part of the process 
     for (from_act, to_act), (temporal_dependency, existential_dependency) in dependencies.items():
         # way as also written in method call - no inversion of the dependency needed 
         if from_act == from_activity and to_act == to_activity: 
