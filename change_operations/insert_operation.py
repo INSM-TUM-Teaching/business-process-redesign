@@ -19,7 +19,14 @@ def has_existential_contradiction(
     existential_deps: Dict[Tuple[str, str], ExistentialDependency],
 ) -> bool:
     """
-    Checks if existential dependencies have contradictions.
+    Checks if there is a contradiction in the existential dependencies.
+
+    Args:
+        existential_deps: The existential dependencies for which the check should be performed
+
+    Returns:
+        True, if it has a contradiction
+        False, if there is no contradiction
     """
     solver = Solver()
     variables = {}
@@ -37,7 +44,7 @@ def has_existential_contradiction(
     for (a, b), dep in existential_deps.items():
         var_a = variables[a]
         var_b = variables[b]
-
+        
         if dep.type == ExistentialType.IMPLICATION:
             constraint = Implies(var_a, var_b)
         elif dep.type == ExistentialType.EQUIVALENCE:
@@ -48,10 +55,8 @@ def has_existential_contradiction(
             constraint = Not(And(var_a, var_b))
         elif dep.type == ExistentialType.OR:
             constraint = Or(var_a, var_b)
-        elif dep.type == ExistentialType.INDEPENDENCE:
-            constraint = True  # No constraint
         else:
-            raise ValueError(f"Unknown dependency type: {dep.type}")
+            constraint = True  # Independence
 
         solver.add(constraint)
 
@@ -65,7 +70,18 @@ def dfs(
     visited: Set[str]
 ):
     """
-    Depth first search returning all activities which have to happen before given activity
+    Depth first search recursively checking if there are loops in temporal dependencies.
+
+    Args:
+        temporal_deps: The temporal dependencies among the activities where there
+        cur_activity: The activity to perform the next step for
+        visited: Set of activities which have already been visited
+    
+    Returns:
+        The set of activities which have been visited.
+
+    Raises:
+        RecursionError if there is a loop.
     """
     for temporal_dep in temporal_deps:
         if temporal_deps.get(temporal_dep).type == TemporalType.INDEPENDENCE:
@@ -87,11 +103,21 @@ def has_temporal_contradiction(
     variants: List[List[str]],
 ):
     """
-    Checks if temporal ordering has contradictions. Handles direct as eventual temporal dependencies, since insert might change it.
-    """
-    # Check direct contradiction
-    # activity direct to 2 activities with something in between in one of the variants
+    Checks if there is a contradiction in the temporal dependencies.
 
+    Args:
+        temporal_deps: The temporal deps for which the check should be performed.
+        existential_deps: The existential dependencies belonging to the temporal_deps.
+        activities: List of all activities.
+        activity: List of activity to be inserted
+        variants: Variants of the matrix for which the check should be performed.
+
+    Returns:
+        True, if it has a contradiction
+        False, if there is no contradiction
+    """
+
+    # Get sets of activities directly before and after
     after = set()
     before = set()
     for source, target in temporal_deps:
@@ -103,12 +129,13 @@ def has_temporal_contradiction(
             after.add(target)
 
     for variant in variants:
-        # check if there is max 1 before and max 1 after in each variant
-        # check if nothing between before and after
         variant_activities = set(variant)
         variant_activities.add(activity)
         if satisfies_existential_constraints(variant_activities, activities, existential_deps):
             continue
+
+        # check if there is max 1 before and max 1 after in each variant
+        # check if with a direct before and after if there is something in between, then there is a contradiction.
         n = 0
         b_pos = -1
         for b in before:
