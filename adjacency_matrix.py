@@ -97,3 +97,57 @@ def parse_yaml_to_adjacency_matrix(file_path: str) -> AdjacencyMatrix:
         )
 
     return matrix
+
+
+def write_adjacency_matrix_to_yaml(matrix: AdjacencyMatrix, file_path: str):
+    """
+    Serializes an AdjacencyMatrix object into a YAML file with formatting and symbols.
+    """
+    mapping_temporal = {
+        TemporalType.DIRECT: ("direct", "≺_d"),
+        TemporalType.EVENTUAL: ("eventual", "≺_e"),
+        TemporalType.INDEPENDENCE: ("independence", "-"),
+    }
+
+    mapping_existential = {
+        ExistentialType.IMPLICATION: ("implication", "⇒"),
+        ExistentialType.EQUIVALENCE: ("equivalence", "⇔"),
+        ExistentialType.NEGATED_EQUIVALENCE: ("negated equivalence", "⇎"),
+        ExistentialType.NAND: ("nand", "|"),
+        ExistentialType.OR: ("or", "∨"),
+        ExistentialType.INDEPENDENCE: ("independence", "-"),
+    }
+
+    data = {
+        "metadata": {
+            "format_version": "1.0",
+            "description": "Process adjacency matrix with temporal and existential dependencies",
+            "activities": matrix.activities,
+        },
+        "dependencies": []
+    }
+
+    for (from_activity, to_activity), (temporal, existential) in matrix.dependencies.items():
+        dep_entry = {
+            "from": from_activity,
+            "to": to_activity,
+        }
+
+        if temporal:
+            temporal_type, temporal_symbol = mapping_temporal[temporal.type]
+            dep_entry["temporal"] = {
+                "type": temporal_type,
+                "symbol": temporal_symbol,
+            }
+
+        if existential:
+            existential_type, existential_symbol = mapping_existential[existential.type]
+            dep_entry["existential"] = {
+                "type": existential_type,
+                "symbol": existential_symbol,
+            }
+
+        data["dependencies"].append(dep_entry)
+
+    with open(file_path, "w") as f:
+        yaml.dump(data, f, sort_keys=False, default_flow_style=False)
