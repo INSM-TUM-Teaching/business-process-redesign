@@ -59,10 +59,11 @@ def perform_collapse_variant(variants: List[List[str]], collapsed_activity: str,
 
     modified_variants = []
     seen = set()
-    isCollapsed = False
-    modified_variant = []
     
     for variant in variants:
+        # set initial conditions to be rest after each iteration 
+        isCollapsed = False
+        modified_variant = []
         # Remove activity from variant if present
         for act in variant:
             if act in collapse_activities: 
@@ -72,7 +73,7 @@ def perform_collapse_variant(variants: List[List[str]], collapsed_activity: str,
                     isCollapsed = True
             else:
                 # if activity is not part of the collaps_activities but just a "normal" activity from the process 
-                modified_variant.append
+                modified_variant.append(act)
         
         # Only add non-empty variants which are unique; add to overall set of collapsed variants  
         if modified_variant:
@@ -95,7 +96,7 @@ def get_unique_elements_between_collapse_activities(variants: List[List[str]], c
     Returns:
         A list of unique activity names that are strictly between two consecutive collapse activities.
     """
-    seen_elements = List()
+    elements_in_between = []
 
     for variant in variants:
         # Find indexes of collapse activities in this variant
@@ -107,10 +108,10 @@ def get_unique_elements_between_collapse_activities(variants: List[List[str]], c
             end = collapse_indexes[i + 1]
             # Add elements between start and end
             for elem in variant[start + 1:end]:
-                if elem not in collapse_activities:
-                    seen_elements.add(elem)
+                if elem not in collapse_activities and elem not in elements_in_between:
+                    elements_in_between.append(elem)
     
-    return seen_elements
+    return elements_in_between
 
 def collapse_operation(main_matrix: AdjacencyMatrix, collapsed_activity: str, collapse_activities: List[str]) -> AdjacencyMatrix:
     """
