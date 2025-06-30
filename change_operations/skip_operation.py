@@ -41,7 +41,7 @@ def skip_activity_in_variants(variants: List[List[str]], optional_activity: str)
 def skip_activity(matrix: AdjacencyMatrix, optional_activity: str) -> AdjacencyMatrix:
     """
     Makes an activity in the process optional:
-    1. Chacking if the named activity is part ov the variant 
+    1. Checking if the named activity is part ov the variant 
     2. If it is part of the variant, for each variant with the activity create one wthout it 
     
     Args:

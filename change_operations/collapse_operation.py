@@ -9,12 +9,12 @@ def collapse_variant_level(matrix: AdjacencyMatrix, main_variants: List[List[str
     Adds the variants of collapsed activities at the correct position in the main_variants
     
     Args:
-        main_variants: List of variants to main process (process in which collapsed activity is)
-        collapsed_activity: Activity which should be the activity still in variants after collapsing
+        main_variants: List of variants in the main process (i.e., the process where the collapsed activity appears).
+        collapsed_activity: The activity that will remain in the variants after collapsing.
         collapse_activities: activities which should be collapsed 
         
     Returns:
-        New variants with the activities collapsed, without duplicates 
+        New list of variants with specified activities collapsed and duplicates removed. 
     """
     modified_variants = []
 
@@ -31,7 +31,7 @@ def collapse_variant_level(matrix: AdjacencyMatrix, main_variants: List[List[str
     else: 
         for activity in activities_in_between:
             for collapse_activity in collapse_activities:
-                # ensure that the y which happens in between is temporally independnet to all of the elements of the activities to be collapsed 
+                # ensure that the intermediate variable y is temporally independent of all activities that are to be collapsed. 
                 temporal_dep, existential_dep = matrix.get_dependency(activity, collapse_activity)
                 # check for dependency type 
                 if temporal_dep.type != TemporalType.INDEPENDENCE:
@@ -61,17 +61,17 @@ def perform_collapse_variant(variants: List[List[str]], collapsed_activity: str,
     
     for variant in variants:
         # set initial conditions to be rest after each iteration 
-        isCollapsed = False
+        is_collapsed = False
         modified_variant = []
         # Remove activity from variant if present
         for act in variant:
             if act in collapse_activities: 
-                if not isCollapsed: 
-                    # for the first occurence of an activity from the set collaps_activities, we replace it with the collapsed_activity
+                if not is_collapsed: 
+                    # for the first occurence of an activity from the set collapse_activities, we replace it with the collapsed_activity
                     modified_variant.append(collapsed_activity)
-                    isCollapsed = True
+                    is_collapsed = True
             else:
-                # if activity is not part of the collaps_activities but just a "normal" activity from the process 
+                # if activity is not part of the collapse_activities but just a "normal" activity from the process 
                 modified_variant.append(act)
         
         # Only add non-empty variants which are unique; add to overall set of collapsed variants  
@@ -116,8 +116,8 @@ def collapse_operation(main_matrix: AdjacencyMatrix, collapsed_activity: str, co
     """
     Collapse a set of activities 
     1. Checks
-    2. For matrix create all acceptance sequences 
-    3. Chack validity for collpasing or if we can find activities in between 
+    2. Create all acceptance variants for matrix 
+    3. Check validity for collpasing or if we can find activities in between 
     
     Args:
         main_matrix: The input adjacency matrix

@@ -41,7 +41,7 @@ def condition_update_in_variants(variants: List[List[str]], condition_activity: 
 def condition_update(matrix: AdjacencyMatrix, condition_activity: str, depending_activity: str) -> AdjacencyMatrix:
     """
     Makes an activity in the process dependending on another activity:
-    1. Chacking if the condition_activity is part of the variant 
+    1. Checking if the condition_activity is part of the variant 
     2. If it is part, the dependening activity may remain in the process, else it must be removed  
     
     Args:

@@ -4,7 +4,7 @@ from acceptance_variants import generate_acceptance_variants
 from traces_to_matrix import traces_to_adjacency_matrix
 from dependencies import ExistentialType
 
-def replace_activity(matrix: AdjacencyMatrix, activity_to_replace: str, active_to_insert: str) -> AdjacencyMatrix:
+def replace_activity(matrix: AdjacencyMatrix, activity_to_replace: str, activity_to_insert: str) -> AdjacencyMatrix:
     """
     Replaces an activity from the process by:
     1. Renaming all occurences of the activity in the matrix to the new activity 
