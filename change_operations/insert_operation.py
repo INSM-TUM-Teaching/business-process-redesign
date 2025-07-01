@@ -166,8 +166,8 @@ def has_temporal_contradiction(
 
 
 def is_valid_input(
-    matrix: AdjacencyMatrix,
     activities,
+    new_activities,
     activity: str,
     variants: List[List[str]],
     total_dependencies: Dict[
@@ -179,11 +179,11 @@ def is_valid_input(
     Checks if input is valid
 
     Args:
-        matrix: The input adjacency matrix.
-        activities: All activities in matrix and activity to be inserted.
+        activities: All activities from orignial matrix.
+        new_activites: All activities from orignial matrix and activity to be inserted.
         activity: The name of the activity to insert.
         variants: All variants reslting from matrix.
-        dependencies: The dependencies defining the position of the activity to be inserted.
+        total_dependencies: The dependencies defining the position of the activity to be inserted.
 
     Returns:
         True: If input is valid
@@ -198,11 +198,11 @@ def is_valid_input(
         if exist_dep:
             total_existential_deps[(source, target)] = exist_dep
 
-    if activity in matrix.get_activities():
+    if activity in activities:
         return False
     if has_existential_contradiction(total_existential_deps):
         return False
-    if has_temporal_contradiction(total_temporal_deps, total_existential_deps, activities, activity, variants):
+    if has_temporal_contradiction(total_temporal_deps, total_existential_deps, new_activities, activity, variants):
         return False
     return True
 
@@ -244,11 +244,9 @@ def insert_activity(
 ) -> AdjacencyMatrix:
     """
     Adds a new acivity to the process by:
-    1. Checking if input is valid.
-    2. Getting the sets of activities before/after and directly before/after.
-    3. Generating variants for the input matrix.
-    4. Checking if for variant existential dependencies hold with and without activity to be inserted.
-    5. Inserting accroding to direct or eventual temporal dependencies.
+    1. Generating variants for the input matrix.
+    2. Insert into variants.
+    3. Convet variants to new matrix.
 
     Args:
         matrix: The input adjacency matrix
@@ -259,17 +257,56 @@ def insert_activity(
         A new adjacency matrix with the activity inserted
 
     Raises:
-        ValueError: If input is produces contradiction
+        ValueError: If input produces contradiction
     """
+    total_dependencies = matrix.get_dependencies() | dependencies
     variants = generate_acceptance_variants(matrix)
+    try:
+        new_variants =  insert_into_variants(activity, dependencies, total_dependencies, matrix.get_activities(), variants)
+    except:
+        raise ValueError("The input is invalid")
+    return traces_to_adjacency_matrix(new_variants)
 
-    new_activities = matrix.get_activities().copy()
+
+
+def insert_into_variants(
+    activity: str,
+    dependencies: Dict[
+        Tuple[str, str],
+        Tuple[Optional[TemporalDependency], Optional[ExistentialDependency]],
+    ],
+    total_dependencies: Dict[
+        Tuple[str, str],
+        Tuple[Optional[TemporalDependency], Optional[ExistentialDependency]],
+    ],
+    activities: List[str],
+    variants: List[List[str]]
+    )-> List[List[str]]:
+    """
+    Adds a new acivity to the process by:
+    1. Checking if input is valid.
+    2. Checking if for variant existential dependencies hold with and without activity to be inserted.
+    3. Inserting according to direct or eventual temporal dependencies.
+
+    Args:
+        activity: The name of the activity to insert
+        dependencies: The dependencies defining the position of the activity to be inserted
+        total_dependencies: Dependencies which also include all the dependencies from the original matrix
+        activities: The activities from the original matrix
+        variants: Variants of the original matrix
+
+    Returns:
+        Variants of the process with activity inserted.
+
+    Raises:
+        ValueError: If input produces contradiction
+    """
+
+    new_activities = activities.copy()
     new_activities.append(activity)
 
-    total_dependencies = matrix.get_dependencies() | dependencies
-
     if not is_valid_input(
-        matrix, new_activities, activity, variants, total_dependencies
+        activities, new_activities, activity, variants, total_dependencies
     ):
         raise ValueError("The input is invalid.")
 
@@ -305,6 +342,4 @@ def insert_activity(
         )
         new_variants.extend(valid_variants)
 
-    new_matrix = traces_to_adjacency_matrix(new_variants)
-
-    return new_matrix
+    return new_variants
