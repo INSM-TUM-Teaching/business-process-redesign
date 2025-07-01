@@ -46,6 +46,12 @@ class AdjacencyMatrix:
     ) -> Optional[Tuple[Optional[TemporalDependency], Optional[ExistentialDependency]]]:
         """Retrieves the dependency between two activities."""
         return self.dependencies.get((from_activity, to_activity))
+    
+    def get_dependencies(self) -> Dict[
+        Tuple[str, str],
+        Tuple[Optional[TemporalDependency], Optional[ExistentialDependency]]]:
+
+        return self.dependencies
 
 
 def parse_yaml_to_adjacency_matrix(file_path: str) -> AdjacencyMatrix:
