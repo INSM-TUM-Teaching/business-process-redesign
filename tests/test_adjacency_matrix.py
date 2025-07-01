@@ -2,6 +2,7 @@ import pytest
 from adjacency_matrix import parse_yaml_to_adjacency_matrix, AdjacencyMatrix
 from dependencies import TemporalType, ExistentialType
 
+
 def test_parse_yaml_to_adjacency_matrix_first_prototype(capsys):
     yaml_file_path = "sample-matrices/first_prototype.yaml"
     adj_matrix = parse_yaml_to_adjacency_matrix(yaml_file_path)
@@ -34,7 +35,8 @@ Dependency from D to E:
   Existential: INDEPENDENCE
 """
     assert captured.out.strip() == expected_output.strip()
-    
+
+
 def test_parse_yaml_value_error_missing_activities():
     # Create a dummy yaml file with missing activities
     content = """
@@ -44,13 +46,17 @@ dependencies:
 """
     with open("test_missing_activities.yaml", "w") as f:
         f.write(content)
-    
+
     with pytest.raises(ValueError) as excinfo:
         parse_yaml_to_adjacency_matrix("test_missing_activities.yaml")
-    assert "YAML file must define a list of activities in metadata." in str(excinfo.value)
+    assert "YAML file must define a list of activities in metadata." in str(
+        excinfo.value
+    )
     # Clean up the dummy file
     import os
+
     os.remove("test_missing_activities.yaml")
+
 
 def test_parse_yaml_value_error_missing_from_to():
     # Create a dummy yaml file with missing from/to in dependencies
@@ -65,8 +71,10 @@ dependencies:
 
     with pytest.raises(ValueError) as excinfo:
         parse_yaml_to_adjacency_matrix("test_missing_from_to.yaml")
-    assert "Each dependency must specify 'from' and 'to' activities." in str(excinfo.value)
+    assert "Each dependency must specify 'from' and 'to' activities." in str(
+        excinfo.value
+    )
     # Clean up the dummy file
     import os
-    os.remove("test_missing_from_to.yaml")
 
+    os.remove("test_missing_from_to.yaml")

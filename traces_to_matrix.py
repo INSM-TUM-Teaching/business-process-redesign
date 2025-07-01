@@ -28,6 +28,7 @@ class InferredTemporalPattern(Enum):
 
 # --- Temporal Dependency Check ---
 
+
 def get_activity_positions(trace: List[str], activity: str) -> List[int]:
     return [i for i, act in enumerate(trace) if act == activity]
 
@@ -53,7 +54,11 @@ def check_single_trace_temporal_relations(
         for i in range(len(from_positions)):
             for j in range(i + 1, len(from_positions)):
                 pos1, pos2 = from_positions[i], from_positions[j]
-                pattern = InferredTemporalPattern.DIRECT if is_directly_follows(pos1, pos2) else InferredTemporalPattern.EVENTUAL
+                pattern = (
+                    InferredTemporalPattern.DIRECT
+                    if is_directly_follows(pos1, pos2)
+                    else InferredTemporalPattern.EVENTUAL
+                )
                 relations.append((pattern, InferredDirection.FORWARD))
         return relations
 
@@ -62,17 +67,29 @@ def check_single_trace_temporal_relations(
         pos_f = from_positions[from_idx]
         pos_t = to_positions[to_idx]
 
-        if is_eventually_follows(pos_f, pos_t): # from_activity instance before to_activity instance
-            pattern = InferredTemporalPattern.DIRECT if is_directly_follows(pos_f, pos_t) else InferredTemporalPattern.EVENTUAL
+        if is_eventually_follows(
+            pos_f, pos_t
+        ):  # from_activity instance before to_activity instance
+            pattern = (
+                InferredTemporalPattern.DIRECT
+                if is_directly_follows(pos_f, pos_t)
+                else InferredTemporalPattern.EVENTUAL
+            )
             relations.append((pattern, InferredDirection.FORWARD))
             from_idx += 1
             to_idx += 1  # Both pointers advance
-        elif is_eventually_follows(pos_t, pos_f):  # to_activity instance before from_activity instance
-            pattern = InferredTemporalPattern.DIRECT if is_directly_follows(pos_t, pos_f) else InferredTemporalPattern.EVENTUAL
+        elif is_eventually_follows(
+            pos_t, pos_f
+        ):  # to_activity instance before from_activity instance
+            pattern = (
+                InferredTemporalPattern.DIRECT
+                if is_directly_follows(pos_t, pos_f)
+                else InferredTemporalPattern.EVENTUAL
+            )
             relations.append((pattern, InferredDirection.BACKWARD))
             to_idx += 1  # Only to_pointer advances, current from_instance might relate to later to_instance
         else:  # pos_f == pos_t. Should not happen if from_activity != to_activity.
-            to_idx += 1 # Advance one pointer to avoid infinite loop
+            to_idx += 1  # Advance one pointer to avoid infinite loop
     return relations
 
 
@@ -89,34 +106,45 @@ def classify_aggregate_temporal_relations(
 
     total_relations_count = len(all_relations)
 
-    forward_relations = [rel for rel in all_relations if rel[1] == InferredDirection.FORWARD]
-    backward_relations = [rel for rel in all_relations if rel[1] == InferredDirection.BACKWARD]
+    forward_relations = [
+        rel for rel in all_relations if rel[1] == InferredDirection.FORWARD
+    ]
+    backward_relations = [
+        rel for rel in all_relations if rel[1] == InferredDirection.BACKWARD
+    ]
 
     forward_count = len(forward_relations)
     backward_count = len(backward_relations)
 
-    forward_ratio = forward_count / total_relations_count if total_relations_count > 0 else 0
-    backward_ratio = backward_count / total_relations_count if total_relations_count > 0 else 0
+    forward_ratio = (
+        forward_count / total_relations_count if total_relations_count > 0 else 0
+    )
+    backward_ratio = (
+        backward_count / total_relations_count if total_relations_count > 0 else 0
+    )
 
     final_direction: Optional[InferredDirection] = None
-    relations_for_type_decision: List[Tuple[InferredTemporalPattern, InferredDirection]] = []
+    relations_for_type_decision: List[
+        Tuple[InferredTemporalPattern, InferredDirection]
+    ] = []
 
     # Determine dominant direction (first if both meet threshold and forward_ratio is higher)
     if forward_ratio >= threshold and forward_ratio >= backward_ratio:
         final_direction = InferredDirection.FORWARD
         relations_for_type_decision = forward_relations
-    elif backward_ratio >= threshold: # check backward only if forward condition failed
+    elif backward_ratio >= threshold:  # check backward only if forward condition failed
         final_direction = InferredDirection.BACKWARD
         relations_for_type_decision = backward_relations
     else:
-        return None # No dominant direction meets threshold criteria
+        return None  # No dominant direction meets threshold criteria
 
-    if not relations_for_type_decision: # Should not happen if final_direction is set
+    if not relations_for_type_decision:  # Should not happen if final_direction is set
         return None
 
     # if any relation (in the set supporting the chosen direction) is Eventual, then Eventual.
     has_eventual = any(
-        pat == InferredTemporalPattern.EVENTUAL for pat, _ in relations_for_type_decision
+        pat == InferredTemporalPattern.EVENTUAL
+        for pat, _ in relations_for_type_decision
     )
 
     final_temporal_type = TemporalType.EVENTUAL if has_eventual else TemporalType.DIRECT
@@ -137,27 +165,38 @@ def infer_temporal_dependency(
     if not traces:
         return None
 
-    all_discovered_relations: List[Tuple[InferredTemporalPattern, InferredDirection]] = []
+    all_discovered_relations: List[
+        Tuple[InferredTemporalPattern, InferredDirection]
+    ] = []
     for trace in traces:
-        trace_relations = check_single_trace_temporal_relations(from_activity, to_activity, trace)
+        trace_relations = check_single_trace_temporal_relations(
+            from_activity, to_activity, trace
+        )
         all_discovered_relations.extend(trace_relations)
 
     if not all_discovered_relations:
         return None
 
-    classified_result = classify_aggregate_temporal_relations(all_discovered_relations, threshold)
+    classified_result = classify_aggregate_temporal_relations(
+        all_discovered_relations, threshold
+    )
 
     if classified_result:
         dep_type, direction = classified_result
         if direction == InferredDirection.FORWARD:
             return TemporalDependency(type=dep_type), from_activity, to_activity
         else:  # InferredDirection.BACKWARD
-            return TemporalDependency(type=dep_type), to_activity, from_activity # Reversed source/target
+            return (
+                TemporalDependency(type=dep_type),
+                to_activity,
+                from_activity,
+            )  # Reversed source/target
 
     return None
 
 
 # --- Existential Dependency Check ---
+
 
 def has_implication(
     from_activity: str,
@@ -205,7 +244,7 @@ def check_negated_equivalence(
 
     relevant_traces = [
         trace for trace in traces if activity1 in trace or activity2 in trace
-    ] # traces containing at least one of the activities
+    ]  # traces containing at least one of the activities
 
     if not relevant_traces:
         return threshold == 0.0
@@ -268,8 +307,8 @@ def infer_existential_dependency(
 
 def traces_to_adjacency_matrix(
     traces: List[List[str]],
-    temporal_threshold: float = 1.0,    # Default threshold for temporal relations
-    existential_threshold: float = 1.0, # Default threshold for existential relations
+    temporal_threshold: float = 1.0,  # Default threshold for temporal relations
+    existential_threshold: float = 1.0,  # Default threshold for existential relations
 ) -> AdjacencyMatrix:
     """
     Converts a list of traces into an AdjacencyMatrix by inferring dependencies.
@@ -294,7 +333,9 @@ def traces_to_adjacency_matrix(
             # For the matrix cell (act1, act2), we infer dependencies FROM act1 TO act2.
 
             # infer_temporal_dependency considers (act1, act2) pair and might return a dep for (act1,act2) or (act2,act1)
-            temp_dep_info = infer_temporal_dependency(act1, act2, valid_traces, temporal_threshold)
+            temp_dep_info = infer_temporal_dependency(
+                act1, act2, valid_traces, temporal_threshold
+            )
 
             final_temporal_dep: Optional[TemporalDependency] = None
             if temp_dep_info:
@@ -307,10 +348,15 @@ def traces_to_adjacency_matrix(
             if act1 == act2:
                 pass
             else:
-                exist_dep_info = infer_existential_dependency(act1, act2, valid_traces, existential_threshold)
+                exist_dep_info = infer_existential_dependency(
+                    act1, act2, valid_traces, existential_threshold
+                )
                 if exist_dep_info:
                     ed, ed_src, ed_tgt = exist_dep_info
-                    if ed.type in [ExistentialType.EQUIVALENCE, ExistentialType.NEGATED_EQUIVALENCE]:
+                    if ed.type in [
+                        ExistentialType.EQUIVALENCE,
+                        ExistentialType.NEGATED_EQUIVALENCE,
+                    ]:
                         # Symmetric dependencies apply to (act1, act2) if act1, act2 is the pair inferred upon.
                         # The inference for (act1, act2) will be the same as for (act2, act1) for these types.
                         final_existential_dep = ed
@@ -319,6 +365,8 @@ def traces_to_adjacency_matrix(
                             final_existential_dep = ed
 
             if final_temporal_dep is not None or final_existential_dep is not None:
-                adj_matrix.add_dependency(act1, act2, final_temporal_dep, final_existential_dep)
+                adj_matrix.add_dependency(
+                    act1, act2, final_temporal_dep, final_existential_dep
+                )
 
     return adj_matrix

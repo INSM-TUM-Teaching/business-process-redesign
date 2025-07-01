@@ -2,9 +2,11 @@ from dependencies import TemporalType, ExistentialType
 
 # --- Temporal Evaluation Helpers ---
 
+
 def is_directly_follows(pos_first: int, pos_second: int) -> bool:
     """Checks if an event at pos_second directly follows an event at pos_first."""
     return pos_second == pos_first + 1
+
 
 def is_eventually_follows(pos_first: int, pos_second: int) -> bool:
     """
@@ -13,35 +15,41 @@ def is_eventually_follows(pos_first: int, pos_second: int) -> bool:
     """
     return pos_first < pos_second
 
+
 # --- Existential Evaluation Helpers ---
+
 
 def evaluate_implication(antecedent_present: bool, consequent_present: bool) -> bool:
     """Checks if (antecedent_present => consequent_present) is true."""
     # True if not (antecedent is present and consequent is absent)
     return not (antecedent_present and not consequent_present)
 
+
 def evaluate_equivalence(first_present: bool, second_present: bool) -> bool:
     """Checks if (first_present <=> second_present) is true."""
     return first_present == second_present
+
 
 def evaluate_negated_equivalence(first_present: bool, second_present: bool) -> bool:
     """Checks if (first_present XOR second_present) is true."""
     return first_present != second_present
 
+
 def evaluate_nand(first_present: bool, second_present: bool) -> bool:
     """Checks if NOT (first_present AND second_present) is true."""
     return not (first_present and second_present)
+
 
 def evaluate_or(first_present: bool, second_present: bool) -> bool:
     """Checks if (first_present OR second_present) is true."""
     return first_present or second_present
 
+
 # --- Combined Checkers ---
 
+
 def check_temporal_relationship(
-    source_pos: int,
-    target_pos: int,
-    relationship_type: TemporalType
+    source_pos: int, target_pos: int, relationship_type: TemporalType
 ) -> bool:
     """
     Checks if the positions of source and target satisfy the specified temporal relationship.
@@ -56,9 +64,7 @@ def check_temporal_relationship(
 
 
 def check_existential_relationship(
-    source_present: bool,
-    target_present: bool,
-    relationship_type: ExistentialType
+    source_present: bool, target_present: bool, relationship_type: ExistentialType
 ) -> bool:
     """
     Checks if the presence/absence of source and target satisfies the specified existential relationship.
