@@ -317,7 +317,7 @@ def traces_to_adjacency_matrix(
                     elif ed.type == ExistentialType.IMPLICATION:
                         if ed_src == act1 and ed_tgt == act2:
                             final_existential_dep = ed
-
+            
             if final_temporal_dep is not None or final_existential_dep is not None:
                 adj_matrix.add_dependency(act1, act2, final_temporal_dep, final_existential_dep)
 
