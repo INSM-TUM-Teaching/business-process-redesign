@@ -5,6 +5,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from flask import Flask, render_template, request, jsonify
 from traces_to_matrix import traces_to_adjacency_matrix
 from change_operations.delete_operation import delete_activity
+from change_operations.swap_operation import swap_activities
 from dependencies import TemporalType, ExistentialType
 import traceback
 
@@ -191,6 +192,33 @@ def delete_activity_endpoint():
         return jsonify({
             "success": True,
             "message": f"Successfully deleted activity '{activity}' from matrix"
+        })
+        
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@app.route("/api/swap-activities", methods=["POST"])
+def swap_activities_endpoint():
+    """Swap two activities in the current matrix"""
+    try:
+        data = request.get_json()
+        activity1 = data.get('activity1')
+        activity2 = data.get('activity2')
+        
+        if not activity1 or not activity2:
+            return jsonify({"success": False, "error": "Both activities must be provided"})
+        
+        global current_matrix
+        if current_matrix is None:
+            return jsonify({"success": False, "error": "Matrix not generated yet"})
+        
+        modified_matrix = swap_activities(current_matrix, activity1, activity2)
+        
+        current_matrix = modified_matrix
+        
+        return jsonify({
+            "success": True,
+            "message": f"Successfully swapped activities '{activity1}' and '{activity2}'"
         })
         
     except Exception as e:
