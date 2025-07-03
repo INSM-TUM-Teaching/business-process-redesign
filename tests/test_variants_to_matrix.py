@@ -1,5 +1,5 @@
 import pytest
-from variants_to_matrix import get_existential_relation_type, variants_to_matrix
+from variants_to_matrix import get_existential_relation_type, get_temporal_relation_type, variants_to_matrix
 from dependencies import ExistentialType, TemporalType
 from adjacency_matrix import AdjacencyMatrix
 
@@ -39,6 +39,17 @@ def test_get_existential():
     combinations = set(frozenset(variant) for variant in variants)
 
     assert get_existential_relation_type("A","B", combinations) == ExistentialType.INDEPENDENCE
+
+def test_get_temporal_relation():
+    variants = [["A", "B", "C", "D", "E"],["B", "A", "C", "D", "F"]]
+
+    assert get_temporal_relation_type("A", "B", variants) == TemporalType.INDEPENDENCE
+
+    assert get_temporal_relation_type("C", "D", variants) == TemporalType.DIRECT
+
+    assert get_temporal_relation_type("A", "C", variants) == TemporalType.EVENTUAL
+
+    assert get_temporal_relation_type("E", "F", variants) == TemporalType.INDEPENDENCE
 
 def test_variants_to_matrix():
     variants = [["A", "B", "C"],["A", "C", "B"]]

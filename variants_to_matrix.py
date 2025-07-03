@@ -3,6 +3,18 @@ from adjacency_matrix import AdjacencyMatrix
 from dependencies import ExistentialDependency, ExistentialType, TemporalDependency, TemporalType
 
 def get_existential_relation_type(a, b, combinations) -> ExistentialType:
+    """
+    Finds existential dependecy type for dependency from activity a to b
+
+    Args:
+        a: Fist activity
+        b: Second activity
+        combinations: Combinations defining the relation
+        
+    Returns:
+        The existenial type for the relation
+    """
+    #Check which combinations of the two activities do exist in combinations
     exists_neither = False
     exists_both = False
     exists_only_a = False
@@ -17,12 +29,14 @@ def get_existential_relation_type(a, b, combinations) -> ExistentialType:
         elif (a not in combination) and (b in combination):
             exists_only_b = True
     
+    #Deduce dependency type from combinations
     if (not exists_only_a) and (not exists_only_b):
         return ExistentialType.EQUIVALENCE
     if not exists_only_a:
+        #Add direction a->b
         return ExistentialType.IMPLICATION
     if not exists_only_b:
-        #change to other dir
+        #change to other direction  a<-b
         return ExistentialType.IMPLICATION
     if (not exists_neither) and (not exists_both):
         return ExistentialType.NEGATED_EQUIVALENCE
@@ -33,6 +47,18 @@ def get_existential_relation_type(a, b, combinations) -> ExistentialType:
     return ExistentialType.INDEPENDENCE
 
 def get_temporal_relation_type(a, b, variants: List[List[str]]) -> TemporalType:
+    """
+    Finds temporal dependecy type from dependency for activity a to b
+
+    Args:
+        a: Fist activity
+        b: Second activity
+        variants: Variants defining the relation
+        
+    Returns:
+        The temporal type for the relation
+    """
+    #Check which relations exist
     exists_a_before_b = False
     exists_b_before_a = False
     exists_a_not_direct_before_b = False
@@ -51,8 +77,10 @@ def get_temporal_relation_type(a, b, variants: List[List[str]]) -> TemporalType:
             exists_b_before_a = True
             if pos_a != pos_b + 1:
                 exists_b_not_direct_before_a = True
+        if (exists_a_before_b and exists_b_before_a):
+            break
 
-    
+    #Deduce relation type from existing relations
     if exists_a_before_b and not exists_b_before_a and not exists_a_not_direct_before_b:
         return TemporalType.DIRECT #a<_d b
     if exists_a_before_b and not exists_b_before_a:
@@ -66,6 +94,11 @@ def get_temporal_relation_type(a, b, variants: List[List[str]]) -> TemporalType:
     return TemporalType.INDEPENDENCE
 
 def variants_to_matrix(variants: List[List[str]]) -> AdjacencyMatrix:
+    """
+    Converts a list of variants into an AdjacencyMatrix.
+    """
+
+    #Get the set of activities
     activities: Set[str] = set()
     for variant in variants:
         activities.update(variant)
@@ -85,7 +118,7 @@ def variants_to_matrix(variants: List[List[str]]) -> AdjacencyMatrix:
 
 
             exist_dep = ExistentialDependency(existential_type)
-            temp_dep = ExistentialDependency(temporal_type) if temporal_type is not None else None
+            temp_dep = TemporalDependency(temporal_type) if temporal_type is not None else None
 
             matrix.add_dependency(activity_a, activity_b, temp_dep, exist_dep)
     
