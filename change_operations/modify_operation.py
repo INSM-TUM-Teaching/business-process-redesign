@@ -15,13 +15,13 @@ def modify_dependency(
         matrix: AdjacencyMatrix ,
         from_activity: str,
         to_activity: str,
-        temporal_dep: Optional[TemporalDependency],
-        existential_dep: Optional[ExistentialDependency],
+        temporal_dep: Optional[TemporalType],
+        existential_dep: Optional[ExistentialType],
     ) -> AdjacencyMatrix: 
     """
-    Modify a depenecy with activities which are part of the process: 
+    Modify a dependency with activities which are part of the process: 
     1. Check that activities from_activity and to_activity are part of activities 
-    2. Search or dependency and change the old dependency to the new activity 
+    2. Search for dependency and change the old dependency to the new activity 
     
     Args:
         matrix: The input adjacency matrix
@@ -34,7 +34,7 @@ def modify_dependency(
         
     Raises:
         ValueError: If from_activity not found 
-        ValueError: If to_activity not found
+        ValueError: If to_activity not found in matrix
     """
 
     # modify the name of the activity to be replaced by the newly named activity  
@@ -49,25 +49,19 @@ def modify_dependency(
         raise ValueError(f"Activity {to_activity} not found in matrix")
     
 
-    # here we must consider the order in which the implication currently is cause the change operation needs to be adapted accoridngly 
+    # here we must consider the order in which the implication currently is cause the change operation needs to be adapted accordingly 
     # replace in dict with dependencies 
     new_matrix = AdjacencyMatrix(activities) 
 
     # iterate over all dependencies which are part of the process 
     for (from_act, to_act), (temporal_dependency, existential_dependency) in dependencies.items():
         # way as also written in method call - no inversion of the dependency needed 
-        if from_act == from_activity and to_act == to_activity: 
+        if (from_act == from_activity and to_act == to_activity) or \
+           (from_act == to_activity and to_act == from_activity):
             if existential_dep: 
-                existential_dependency = existential_dep
+                existential_dependency = ExistentialDependency(existential_dep)
             if temporal_dep:
-                temporal_dependency = temporal_dep
-        # inverse to the way written in the function call - inversion needed 
-        elif from_act == to_activity and to_act == from_activity: 
-            # TODO must be inversed for new existential dependency 
-            if existential_dep: 
-                existential_dependency = existential_dep
-            if temporal_dep:
-                temporal_dependency = temporal_dep
+                temporal_dependency = TemporalDependency(temporal_dep)
 
         new_matrix.add_dependency(from_act, to_act, temporal_dependency, existential_dependency)
 
