@@ -7,6 +7,7 @@ from dependencies import (
     ExistentialDependency,
     TemporalType,
     ExistentialType,
+    Direction,
 )
 from constraint_logic import (
     evaluate_implication,
@@ -148,11 +149,18 @@ def infer_temporal_dependency(
     classified_result = classify_aggregate_temporal_relations(all_discovered_relations, threshold)
 
     if classified_result:
-        dep_type, direction = classified_result
-        if direction == InferredDirection.FORWARD:
-            return TemporalDependency(type=dep_type), from_activity, to_activity
+        dep_type, direction_inferred = classified_result
+        direction = Direction.FORWARD
+        if direction_inferred == InferredDirection.BACKWARD:
+            direction = Direction.BACKWARD
+
+        if dep_type == TemporalType.INDEPENDENCE:
+            direction = Direction.BOTH
+
+        if direction_inferred == InferredDirection.FORWARD:
+            return TemporalDependency(type=dep_type, direction=direction), from_activity, to_activity
         else:  # InferredDirection.BACKWARD
-            return TemporalDependency(type=dep_type), to_activity, from_activity # Reversed source/target
+            return TemporalDependency(type=dep_type, direction=direction), to_activity, from_activity # Reversed source/target
 
     return None
 
@@ -239,26 +247,26 @@ def infer_existential_dependency(
 
     if a_implies_b and b_implies_a:
         return (
-            ExistentialDependency(type=ExistentialType.EQUIVALENCE),
+            ExistentialDependency(type=ExistentialType.EQUIVALENCE, direction=Direction.BOTH),
             activity_a,
             activity_b,
         )
     if a_implies_b:
         return (
-            ExistentialDependency(type=ExistentialType.IMPLICATION),
+            ExistentialDependency(type=ExistentialType.IMPLICATION, direction=Direction.FORWARD),
             activity_a,
             activity_b,
         )
     if b_implies_a:
         return (
-            ExistentialDependency(type=ExistentialType.IMPLICATION),
-            activity_b,
+            ExistentialDependency(type=ExistentialType.IMPLICATION, direction=Direction.BACKWARD),
             activity_a,
+            activity_b,
         )
 
     if check_negated_equivalence(activity_a, activity_b, traces, threshold):
         return (
-            ExistentialDependency(type=ExistentialType.NEGATED_EQUIVALENCE),
+            ExistentialDependency(type=ExistentialType.NEGATED_EQUIVALENCE, direction=Direction.BOTH),
             activity_a,
             activity_b,
         )
@@ -285,40 +293,47 @@ def traces_to_adjacency_matrix(
 
     for trace in valid_traces:
         activities_set.update(trace)
+    
+    all_activities = sorted(list(activities_set))
+    adj_matrix = AdjacencyMatrix(activities=all_activities)
 
-    sorted_activities = sorted(list(activities_set))
-    adj_matrix = AdjacencyMatrix(activities=sorted_activities)
+    for i in range(len(all_activities)):
+        for j in range(len(all_activities)):
+            from_activity = all_activities[i]
+            to_activity = all_activities[j]
 
-    for act1 in sorted_activities:
-        for act2 in sorted_activities:
-            # For the matrix cell (act1, act2), we infer dependencies FROM act1 TO act2.
+            if from_activity == to_activity:
+                continue
 
-            # infer_temporal_dependency considers (act1, act2) pair and might return a dep for (act1,act2) or (act2,act1)
-            temp_dep_info = infer_temporal_dependency(act1, act2, valid_traces, temporal_threshold)
+            temporal_dependency = infer_temporal_dependency(
+                from_activity, to_activity, valid_traces, temporal_threshold
+            )
+            existential_dependency = infer_existential_dependency(
+                from_activity, to_activity, valid_traces, existential_threshold
+            )
 
-            final_temporal_dep: Optional[TemporalDependency] = None
-            if temp_dep_info:
-                td, td_src, td_tgt = temp_dep_info
-                if td_src == act1 and td_tgt == act2:
-                    final_temporal_dep = td
+            # Unpack dependencies
+            temp_dep_obj = temporal_dependency[0] if temporal_dependency else None
 
-            # Infer Existential Dependency
-            final_existential_dep: Optional[ExistentialDependency] = None
-            if act1 == act2:
-                pass
+            exist_dep_obj = None
+            if existential_dependency:
+                exist_dep_obj = existential_dependency[0]
+                exist_src, exist_tgt = existential_dependency[1], existential_dependency[2]
+                if (exist_src, exist_tgt) == (from_activity, to_activity):
+                    adj_matrix.add_dependency(
+                        from_activity, to_activity, temp_dep_obj, exist_dep_obj
+                    )
+                elif (exist_src, exist_tgt) == (to_activity, from_activity):
+                    adj_matrix.add_dependency(
+                        to_activity, from_activity, temp_dep_obj, exist_dep_obj
+                    )
+                else:
+                    adj_matrix.add_dependency(
+                        from_activity, to_activity, temp_dep_obj, None
+                    )
             else:
-                exist_dep_info = infer_existential_dependency(act1, act2, valid_traces, existential_threshold)
-                if exist_dep_info:
-                    ed, ed_src, ed_tgt = exist_dep_info
-                    if ed.type in [ExistentialType.EQUIVALENCE, ExistentialType.NEGATED_EQUIVALENCE]:
-                        # Symmetric dependencies apply to (act1, act2) if act1, act2 is the pair inferred upon.
-                        # The inference for (act1, act2) will be the same as for (act2, act1) for these types.
-                        final_existential_dep = ed
-                    elif ed.type == ExistentialType.IMPLICATION:
-                        if ed_src == act1 and ed_tgt == act2:
-                            final_existential_dep = ed
-
-            if final_temporal_dep is not None or final_existential_dep is not None:
-                adj_matrix.add_dependency(act1, act2, final_temporal_dep, final_existential_dep)
+                adj_matrix.add_dependency(
+                    from_activity, to_activity, temp_dep_obj, None
+                )
 
     return adj_matrix
