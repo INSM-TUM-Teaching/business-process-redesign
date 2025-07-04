@@ -320,6 +320,16 @@ function updateOperationForm() {
                     <label><input type="checkbox" id="preserve-outgoing" checked> Preserve Outgoing Dependencies</label>
                 </div>
             </div>`;
+    } else if (operationType === 'swap') {
+        formDiv.innerHTML = `
+            <div class="form-group">
+                <label class="form-label">Activity 1:</label>
+                <input type="text" class="form-control" id="swap-activity1" placeholder="First activity to swap">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Activity 2:</label>
+                <input type="text" class="form-control" id="swap-activity2" placeholder="Second activity to swap">
+            </div>`;
     } else {
         formDiv.innerHTML = `
             <div class="alert alert-warning">
@@ -356,4 +366,4 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Set up any additional initialization
     console.log('Business Process Redesign Tool initialized');
-}); 
+});
