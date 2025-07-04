@@ -1,6 +1,6 @@
 import pytest
 from adjacency_matrix import AdjacencyMatrix, parse_yaml_to_adjacency_matrix
-from dependencies import TemporalType, ExistentialType, TemporalDependency, ExistentialDependency
+from dependencies import TemporalType, ExistentialType, TemporalDependency, ExistentialDependency, Direction
 from acceptance_variants import (
     satisfies_existential_constraints,
     build_permutations,
@@ -15,65 +15,66 @@ def sample_activities():
 @pytest.fixture
 def sample_adj_matrix(sample_activities):
     matrix = AdjacencyMatrix(activities=sample_activities)
-    matrix.add_dependency("A", "B", TemporalDependency(TemporalType.DIRECT), ExistentialDependency(ExistentialType.IMPLICATION))
-    matrix.add_dependency("B", "C", TemporalDependency(TemporalType.EVENTUAL), ExistentialDependency(ExistentialType.EQUIVALENCE))
-    matrix.add_dependency("A", "C", TemporalDependency(TemporalType.INDEPENDENCE), ExistentialDependency(ExistentialType.OR))
+    matrix.add_dependency("A", "B", TemporalDependency(TemporalType.DIRECT, Direction.FORWARD), ExistentialDependency(ExistentialType.IMPLICATION, Direction.FORWARD))
+    matrix.add_dependency("B", "C", TemporalDependency(TemporalType.EVENTUAL, Direction.FORWARD), ExistentialDependency(ExistentialType.EQUIVALENCE, Direction.BOTH))
+    matrix.add_dependency("A", "C", TemporalDependency(TemporalType.INDEPENDENCE, Direction.BOTH), ExistentialDependency(ExistentialType.OR, Direction.BOTH))
     return matrix
 
+
 def test_satisfies_existential_implication_ok(sample_activities):
-    deps = {("A", "B"): ExistentialDependency(ExistentialType.IMPLICATION)}
+    deps = {("A", "B"): ExistentialDependency(ExistentialType.IMPLICATION, Direction.FORWARD)}
     assert satisfies_existential_constraints({"A", "B"}, sample_activities, deps) == True
     assert satisfies_existential_constraints({"B"}, sample_activities, deps) == True
     assert satisfies_existential_constraints(set(), sample_activities, deps) == True
     assert satisfies_existential_constraints({"A", "C"}, sample_activities, deps) == False
 
 def test_satisfies_existential_implication_fail(sample_activities):
-    deps = {("A", "B"): ExistentialDependency(ExistentialType.IMPLICATION)}
+    deps = {("A", "B"): ExistentialDependency(ExistentialType.IMPLICATION, Direction.FORWARD)}
     assert satisfies_existential_constraints({"A"}, sample_activities, deps) == False
 
 def test_satisfies_existential_equivalence_ok(sample_activities):
-    deps = {("A", "B"): ExistentialDependency(ExistentialType.EQUIVALENCE)}
+    deps = {("A", "B"): ExistentialDependency(ExistentialType.EQUIVALENCE, Direction.BOTH)}
     assert satisfies_existential_constraints({"A", "B"}, sample_activities, deps) == True
     assert satisfies_existential_constraints(set(), sample_activities, deps) == True
 
 def test_satisfies_existential_equivalence_fail(sample_activities):
-    deps = {("A", "B"): ExistentialDependency(ExistentialType.EQUIVALENCE)}
+    deps = {("A", "B"): ExistentialDependency(ExistentialType.EQUIVALENCE, Direction.BOTH)}
     assert satisfies_existential_constraints({"A"}, sample_activities, deps) == False
     assert satisfies_existential_constraints({"B"}, sample_activities, deps) == False
 
 def test_satisfies_existential_or_ok(sample_activities):
-    deps = {("A", "B"): ExistentialDependency(ExistentialType.OR)}
+    deps = {("A", "B"): ExistentialDependency(ExistentialType.OR, Direction.BOTH)}
     assert satisfies_existential_constraints({"A"}, sample_activities, deps) == True
     assert satisfies_existential_constraints({"B"}, sample_activities, deps) == True
     assert satisfies_existential_constraints({"A", "B"}, sample_activities, deps) == True
 
 def test_satisfies_existential_or_fail(sample_activities):
-    deps = {("A", "B"): ExistentialDependency(ExistentialType.OR)}
+    deps = {("A", "B"): ExistentialDependency(ExistentialType.OR, Direction.BOTH)}
     assert satisfies_existential_constraints(set(), sample_activities, deps) == False
     assert satisfies_existential_constraints({"C"}, sample_activities, deps) == False # A and B not in subset
 
 def test_satisfies_existential_nand_ok(sample_activities):
-    deps = {("A", "B"): ExistentialDependency(ExistentialType.NAND)}
+    deps = {("A", "B"): ExistentialDependency(ExistentialType.NAND, Direction.BOTH)}
     assert satisfies_existential_constraints({"A"}, sample_activities, deps) == True
     assert satisfies_existential_constraints({"B"}, sample_activities, deps) == True
     assert satisfies_existential_constraints(set(), sample_activities, deps) == True
 
 def test_satisfies_existential_nand_fail(sample_activities):
-    deps = {("A", "B"): ExistentialDependency(ExistentialType.NAND)}
+    deps = {("A", "B"): ExistentialDependency(ExistentialType.NAND, Direction.BOTH)}
     assert satisfies_existential_constraints({"A", "B"}, sample_activities, deps) == False
 
 def test_satisfies_existential_negated_equivalence_ok(sample_activities):
-    deps = {("A", "B"): ExistentialDependency(ExistentialType.NEGATED_EQUIVALENCE)}
+    deps = {("A", "B"): ExistentialDependency(ExistentialType.NEGATED_EQUIVALENCE, Direction.BOTH)}
     assert satisfies_existential_constraints({"A"}, sample_activities, deps) == True
     assert satisfies_existential_constraints({"B"}, sample_activities, deps) == True
 
 def test_satisfies_existential_negated_equivalence_fail(sample_activities):
-    deps = {("A", "B"): ExistentialDependency(ExistentialType.NEGATED_EQUIVALENCE)}
+    deps = {("A", "B"): ExistentialDependency(ExistentialType.NEGATED_EQUIVALENCE, Direction.BOTH)}
     assert satisfies_existential_constraints({"A", "B"}, sample_activities, deps) == False
     assert satisfies_existential_constraints(set(), sample_activities, deps) == False
 
 def test_satisfies_existential_independence(sample_activities):
-    deps = {("A", "B"): ExistentialDependency(ExistentialType.INDEPENDENCE)}
+    deps = {("A", "B"): ExistentialDependency(ExistentialType.INDEPENDENCE, Direction.BOTH)}
     assert satisfies_existential_constraints({"A", "B"}, sample_activities, deps) == True
     assert satisfies_existential_constraints({"A"}, sample_activities, deps) == True
     assert satisfies_existential_constraints(set(), sample_activities, deps) == True
@@ -94,29 +95,29 @@ def test_build_permutations_multiple():
     assert ['B', 'A'] in perms or ['A', 'B'] in perms
 
 def test_satisfies_temporal_direct_ok():
-    deps = {("A", "B"): TemporalDependency(TemporalType.DIRECT)}
+    deps = {("A", "B"): TemporalDependency(TemporalType.DIRECT, Direction.FORWARD)}
     assert satisfies_temporal_constraints(["A", "B"], deps) == True
     assert satisfies_temporal_constraints(["X", "A", "B", "Y"], deps) == True
 
 def test_satisfies_temporal_direct_fail():
-    deps = {("A", "B"): TemporalDependency(TemporalType.DIRECT)}
+    deps = {("A", "B"): TemporalDependency(TemporalType.DIRECT, Direction.FORWARD)}
     assert satisfies_temporal_constraints(["B", "A"], deps) == False
     assert satisfies_temporal_constraints(["A", "X", "B"], deps) == False
     assert satisfies_temporal_constraints(["A"], deps) == True
     assert satisfies_temporal_constraints(["B"], deps) == True
 
 def test_satisfies_temporal_eventual_ok():
-    deps = {("A", "B"): TemporalDependency(TemporalType.EVENTUAL)}
+    deps = {("A", "B"): TemporalDependency(TemporalType.EVENTUAL, Direction.FORWARD)}
     assert satisfies_temporal_constraints(["A", "B"], deps) == True
     assert satisfies_temporal_constraints(["A", "X", "B"], deps) == True
 
 def test_satisfies_temporal_eventual_fail():
-    deps = {("A", "B"): TemporalDependency(TemporalType.EVENTUAL)}
+    deps = {("A", "B"): TemporalDependency(TemporalType.EVENTUAL, Direction.FORWARD)}
     assert satisfies_temporal_constraints(["B", "A"], deps) == False
     assert satisfies_temporal_constraints(["B", "X", "A"], deps) == False
 
 def test_satisfies_temporal_independence():
-    deps = {("A", "B"): TemporalDependency(TemporalType.INDEPENDENCE)}
+    deps = {("A", "B"): TemporalDependency(TemporalType.INDEPENDENCE, Direction.BOTH)}
     assert satisfies_temporal_constraints(["A", "B"], deps) == True
     assert satisfies_temporal_constraints(["B", "A"], deps) == True
     assert satisfies_temporal_constraints(["A", "X", "B"], deps) == True
@@ -126,7 +127,7 @@ def test_satisfies_temporal_empty_sequence():
 
 def test_generate_acceptance_variants_simple_direct_implication():
     adj = AdjacencyMatrix(activities=["A", "B"])
-    adj.add_dependency("A", "B", TemporalDependency(TemporalType.DIRECT), ExistentialDependency(ExistentialType.IMPLICATION))
+    adj.add_dependency("A", "B", TemporalDependency(TemporalType.DIRECT, Direction.FORWARD), ExistentialDependency(ExistentialType.IMPLICATION, Direction.FORWARD))
     variants = generate_acceptance_variants(adj)
     
     expected_variants = sorted([[], ["B"], ["A", "B"]])
@@ -135,14 +136,14 @@ def test_generate_acceptance_variants_simple_direct_implication():
 
 def test_generate_acceptance_variants_simple_eventual_equivalence():
     adj = AdjacencyMatrix(activities=["A", "B"])
-    adj.add_dependency("A", "B", TemporalDependency(TemporalType.EVENTUAL), ExistentialDependency(ExistentialType.EQUIVALENCE))
+    adj.add_dependency("A", "B", TemporalDependency(TemporalType.EVENTUAL, Direction.FORWARD), ExistentialDependency(ExistentialType.EQUIVALENCE, Direction.BOTH))
     variants = generate_acceptance_variants(adj)
     assert sorted(variants) == sorted([[], ["A", "B"]])
 
 def test_generate_acceptance_variants_choice_or():
     adj = AdjacencyMatrix(activities=["A", "B"])
-    adj.add_dependency("A", "B", None, ExistentialDependency(ExistentialType.OR))
-    adj.add_dependency("B", "A", None, ExistentialDependency(ExistentialType.OR))
+    adj.add_dependency("A", "B", None, ExistentialDependency(ExistentialType.OR, Direction.BOTH))
+    adj.add_dependency("B", "A", None, ExistentialDependency(ExistentialType.OR, Direction.BOTH))
 
     variants = generate_acceptance_variants(adj)
     expected = sorted([["A"], ["B"], ["A", "B"], ["B", "A"]])
@@ -163,10 +164,10 @@ def test_generate_acceptance_variants_from_yaml_first_prototype():
     assert found_ABCE, "Expected variant [A,B,C,E] not found."
 
     adj_indep = AdjacencyMatrix(activities=["X", "Y"])
-    adj_indep.add_dependency("X", "Y", TemporalDependency(TemporalType.INDEPENDENCE), ExistentialDependency(ExistentialType.INDEPENDENCE))
-    adj_indep.add_dependency("Y", "X", TemporalDependency(TemporalType.INDEPENDENCE), ExistentialDependency(ExistentialType.INDEPENDENCE))
-    adj_indep.add_dependency("X", "X", TemporalDependency(TemporalType.INDEPENDENCE), ExistentialDependency(ExistentialType.INDEPENDENCE))
-    adj_indep.add_dependency("Y", "Y", TemporalDependency(TemporalType.INDEPENDENCE), ExistentialDependency(ExistentialType.INDEPENDENCE))
+    adj_indep.add_dependency("X", "Y", TemporalDependency(TemporalType.INDEPENDENCE, Direction.BOTH), ExistentialDependency(ExistentialType.INDEPENDENCE, Direction.BOTH))
+    adj_indep.add_dependency("Y", "X", TemporalDependency(TemporalType.INDEPENDENCE, Direction.BOTH), ExistentialDependency(ExistentialType.INDEPENDENCE, Direction.BOTH))
+    adj_indep.add_dependency("X", "X", TemporalDependency(TemporalType.INDEPENDENCE, Direction.BOTH), ExistentialDependency(ExistentialType.INDEPENDENCE, Direction.BOTH))
+    adj_indep.add_dependency("Y", "Y", TemporalDependency(TemporalType.INDEPENDENCE, Direction.BOTH), ExistentialDependency(ExistentialType.INDEPENDENCE, Direction.BOTH))
     
     variants_indep = generate_acceptance_variants(adj_indep)
     expected_indep = sorted([[], ["X"], ["Y"], ["X","Y"], ["Y","X"]])

@@ -1,18 +1,18 @@
-from typing import List, Set
+from typing import List, Set, Tuple
 from adjacency_matrix import AdjacencyMatrix
-from dependencies import ExistentialDependency, ExistentialType, TemporalDependency, TemporalType
+from dependencies import ExistentialDependency, ExistentialType, TemporalDependency, TemporalType, Direction
 
-def get_existential_relation_type(a, b, combinations) -> ExistentialType:
+def get_existential_relation(a, b, combinations) -> Tuple[ExistentialType, Direction]:
     """
-    Finds existential dependecy type for dependency from activity a to b
+    Finds existential dependency type for dependency from activity a to b
 
     Args:
-        a: Fist activity
+        a: First activity
         b: Second activity
         combinations: Combinations defining the relation
         
     Returns:
-        The existenial type for the relation
+        The existential type for the relation
     """
     #Check which combinations of the two activities do exist in combinations
     exists_neither = False
@@ -31,24 +31,24 @@ def get_existential_relation_type(a, b, combinations) -> ExistentialType:
     
     #Deduce dependency type from combinations
     if (not exists_only_a) and (not exists_only_b):
-        return ExistentialType.EQUIVALENCE
+        return (ExistentialType.EQUIVALENCE, Direction.BOTH)
     if not exists_only_a:
         #Add direction a->b
-        return ExistentialType.IMPLICATION
+        return (ExistentialType.IMPLICATION, Direction.FORWARD)
     if not exists_only_b:
         #change to other direction  a<-b
-        return ExistentialType.IMPLICATION
+        return (ExistentialType.IMPLICATION, Direction.BACKWARD)
     if (not exists_neither) and (not exists_both):
-        return ExistentialType.NEGATED_EQUIVALENCE
+        return (ExistentialType.NEGATED_EQUIVALENCE, Direction.BOTH)
     if not exists_both:
-        return ExistentialType.NAND
+        return (ExistentialType.NAND, Direction.BOTH)
     if not exists_neither:
-        return ExistentialType.OR
-    return ExistentialType.INDEPENDENCE
+        return (ExistentialType.OR, Direction.BOTH)
+    return (ExistentialType.INDEPENDENCE, Direction.BOTH)
 
-def get_temporal_relation_type(a, b, variants: List[List[str]]) -> TemporalType:
+def get_temporal_relation(a, b, variants: List[List[str]]) -> Tuple[TemporalType, Direction]:
     """
-    Finds temporal dependecy type from dependency for activity a to b
+    Finds temporal dependency type from dependency for activity a to b
 
     Args:
         a: Fist activity
@@ -82,16 +82,18 @@ def get_temporal_relation_type(a, b, variants: List[List[str]]) -> TemporalType:
 
     #Deduce relation type from existing relations
     if exists_a_before_b and not exists_b_before_a and not exists_a_not_direct_before_b:
-        return TemporalType.DIRECT #a<_d b
+        return (TemporalType.DIRECT, Direction.FORWARD) #a<_d b
     if exists_a_before_b and not exists_b_before_a:
-        return TemporalType.EVENTUAL #a< b
+        return (TemporalType.EVENTUAL, Direction.FORWARD) #a< b
     if exists_b_before_a and not exists_a_before_b and not exists_b_not_direct_before_a:
         #add a >_d b
-        return None
+        return (TemporalType.DIRECT, Direction.BACKWARD)
     if exists_b_before_a and not exists_a_before_b:
         #add a > b
-        return None
-    return TemporalType.INDEPENDENCE
+        return (TemporalType.EVENTUAL, Direction.BACKWARD)
+    if exists_a_before_b and exists_b_before_a:
+        return (TemporalType.INDEPENDENCE, Direction.BOTH)
+    return (None, None)
 
 def variants_to_matrix(variants: List[List[str]]) -> AdjacencyMatrix:
     """
@@ -113,12 +115,12 @@ def variants_to_matrix(variants: List[List[str]]) -> AdjacencyMatrix:
         for activity_b in activities:
             if activity_a == activity_b:
                 continue
-            existential_type = get_existential_relation_type(activity_a, activity_b, combinations)
-            temporal_type = get_temporal_relation_type(activity_a, activity_b, variants)
+            existential_type, existential_direction = get_existential_relation(activity_a, activity_b, combinations)
+            temporal_type, temporal_direction = get_temporal_relation(activity_a, activity_b, variants)
 
 
-            exist_dep = ExistentialDependency(existential_type)
-            temp_dep = TemporalDependency(temporal_type) if temporal_type is not None else None
+            exist_dep = ExistentialDependency(existential_type, existential_direction)
+            temp_dep = TemporalDependency(temporal_type, temporal_direction) if temporal_type is not None else None
 
             matrix.add_dependency(activity_a, activity_b, temp_dep, exist_dep)
     

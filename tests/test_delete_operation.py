@@ -5,6 +5,7 @@ from dependencies import (
     ExistentialDependency,
     TemporalType,
     ExistentialType,
+    Direction,
 )
 from change_operations.delete_operation import delete_activity, delete_activity_from_variants
 
@@ -29,13 +30,13 @@ def test_delete_activity():
     matrix = AdjacencyMatrix(activities=["A", "B", "C"])
     matrix.add_dependency(
         "A", "B",
-        TemporalDependency(TemporalType.DIRECT),
-        ExistentialDependency(ExistentialType.IMPLICATION)
+        TemporalDependency(TemporalType.DIRECT, Direction.FORWARD),
+        ExistentialDependency(ExistentialType.IMPLICATION, Direction.FORWARD)
     )
     matrix.add_dependency(
         "B", "C",
-        TemporalDependency(TemporalType.DIRECT),
-        ExistentialDependency(ExistentialType.IMPLICATION)
+        TemporalDependency(TemporalType.DIRECT, Direction.FORWARD),
+        ExistentialDependency(ExistentialType.IMPLICATION, Direction.FORWARD)
     )
     
     # Delete activity B
@@ -60,8 +61,8 @@ def test_delete_resulting_in_empty_process():
     matrix = AdjacencyMatrix(activities=["A", "B"])
     matrix.add_dependency(
         "A", "B",
-        TemporalDependency(TemporalType.DIRECT),
-        ExistentialDependency(ExistentialType.EQUIVALENCE)
+        TemporalDependency(TemporalType.DIRECT, Direction.FORWARD),
+        ExistentialDependency(ExistentialType.EQUIVALENCE, Direction.BOTH)
     )
     
     # Deleting either A or B should fail as it would result in empty process
