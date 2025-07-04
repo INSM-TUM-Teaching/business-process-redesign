@@ -2,6 +2,31 @@ from enum import Enum, auto
 from dataclasses import dataclass
 
 
+class Direction(Enum):
+    """
+    Defines the direction of a dependency.
+    """
+
+    FORWARD = auto()
+    BACKWARD = auto()
+    BOTH = auto()
+
+    @classmethod
+    def from_yaml(cls, yaml_direction_str: str) -> "Direction":
+        """Converts a YAML string type to a Direction enum member."""
+        mapping = {
+            "forward": cls.FORWARD,
+            "backward": cls.BACKWARD,
+            "both": cls.BOTH,
+        }
+        lower_value = yaml_direction_str.lower()
+        if lower_value not in mapping:
+            raise ValueError(
+                f"Unknown direction string from YAML: '{yaml_direction_str}'"
+            )
+        return mapping[lower_value]
+
+
 class TemporalType(Enum):
     """
     Defines the type of temporal relationship between two activities.
@@ -37,6 +62,7 @@ class TemporalDependency:
     """
 
     type: TemporalType
+    direction: Direction
 
 
 class ExistentialType(Enum):
@@ -83,3 +109,4 @@ class ExistentialDependency:
     """
 
     type: ExistentialType
+    direction: Direction

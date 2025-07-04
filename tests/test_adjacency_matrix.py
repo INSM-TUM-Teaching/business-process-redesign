@@ -1,37 +1,42 @@
 import pytest
 from adjacency_matrix import parse_yaml_to_adjacency_matrix, AdjacencyMatrix
-from dependencies import TemporalType, ExistentialType
+from dependencies import TemporalType, ExistentialType, Direction
 
 def test_parse_yaml_to_adjacency_matrix_first_prototype(capsys):
     yaml_file_path = "sample-matrices/first_prototype.yaml"
     adj_matrix = parse_yaml_to_adjacency_matrix(yaml_file_path)
 
     print(f"Successfully parsed activities: {adj_matrix.activities}")
-    for (act_from, act_to), (temp_dep, exist_dep) in adj_matrix.dependencies.items():
+    # Sort dependencies for consistent output
+    sorted_dependencies = sorted(adj_matrix.dependencies.items())
+
+    for (act_from, act_to), (temp_dep, exist_dep) in sorted_dependencies:
         print(f"Dependency from {act_from} to {act_to}:")
         if temp_dep:
-            print(f"  Temporal: {temp_dep.type.name}")
+            print(f"  Temporal: {temp_dep.type.name} ({temp_dep.direction.name})")
         else:
             print(f"  Temporal: None")
         if exist_dep:
-            print(f"  Existential: {exist_dep.type.name}")
+            print(
+                f"  Existential: {exist_dep.type.name} ({exist_dep.direction.name})"
+            )
         else:
             print(f"  Existential: None")
 
     captured = capsys.readouterr()
     expected_output = """Successfully parsed activities: ['A', 'B', 'C', 'D', 'E']
 Dependency from A to B:
-  Temporal: DIRECT
-  Existential: IMPLICATION
+  Temporal: DIRECT (FORWARD)
+  Existential: IMPLICATION (FORWARD)
 Dependency from B to C:
-  Temporal: EVENTUAL
-  Existential: EQUIVALENCE
+  Temporal: EVENTUAL (FORWARD)
+  Existential: EQUIVALENCE (BOTH)
 Dependency from C to D:
-  Temporal: INDEPENDENCE
-  Existential: NAND
+  Temporal: INDEPENDENCE (BOTH)
+  Existential: NAND (BOTH)
 Dependency from D to E:
-  Temporal: DIRECT
-  Existential: INDEPENDENCE
+  Temporal: DIRECT (FORWARD)
+  Existential: INDEPENDENCE (BOTH)
 """
     assert captured.out.strip() == expected_output.strip()
     
