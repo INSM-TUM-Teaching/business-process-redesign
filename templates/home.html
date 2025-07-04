@@ -11,7 +11,6 @@
 <div class="tabs">
     <button class="tab active" onclick="showTab('trace-analysis')">Trace Analysis</button>
     <button class="tab" onclick="showTab('matrix-view')">Dependency Matrix</button>
-    <button class="tab" onclick="showTab('process-redesign')">Process Redesign</button>
     <button class="tab" onclick="showTab('change-operations')">Change Operations</button>
 </div>
 
@@ -106,78 +105,6 @@ B,A,C,D</textarea>
             <div id="dependency-details">
                 <div class="alert alert-info">
                     Matrix dependencies will be listed here with detailed explanations.
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Process Redesign Tab -->
-<div id="process-redesign" class="tab-content">
-    <div class="container">
-        <h2 class="section-title">Process Redesign & Acceptance Variants</h2>
-        
-        <div class="grid grid-2">
-            <div class="card">
-                <h3 class="card-title">Redesign Configuration</h3>
-                <div class="form-group">
-                    <label class="form-label">Target Activities for Redesign:</label>
-                    <input type="text" class="form-control" id="target-activities" placeholder="A,B,C">
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Redesign Strategy:</label>
-                    <select class="form-control placeholder" id="redesign-strategy">
-                        <option value="optimize">Optimize Dependencies</option>
-                        <option value="parallelize">Parallelize Activities</option>
-                        <option value="eliminate">Eliminate Redundancies</option>
-                        <option value="reorder">Reorder Sequence</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Constraint Preservation:</label>
-                    <div style="margin-top: 0.5rem;">
-                        <label><input type="checkbox" id="preserve-temporal" checked class="placeholder"> Preserve Temporal Constraints</label><br>
-                        <label><input type="checkbox" id="preserve-existential" checked class="placeholder"> Preserve Existential Constraints</label><br>
-                        <label><input type="checkbox" id="allow-violations" class="placeholder"> Allow Minor Violations</label>
-                    </div>
-                </div>
-                
-                <div class="btn-group">
-                    <button class="btn btn-primary placeholder" onclick="generateVariants()">Generate Acceptance Variants</button>
-                    <button class="btn btn-secondary placeholder" onclick="validateVariants()">Validate Variants</button>
-                </div>
-            </div>
-            
-            <div class="card">
-                <h3 class="card-title">Generated Variants</h3>
-                <div id="acceptance-variants">
-                    <div class="alert alert-info">
-                        Configure redesign parameters and generate acceptance variants to see results here.
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="container">
-            <h3 class="section-title placeholder">Variant Comparison</h3>
-            <div class="grid grid-3">
-                <div class="card">
-                    <h4 class="card-title placeholder">Performance Metrics</h4>
-                    <canvas id="performance-chart" width="300" height="200"></canvas>
-                </div>
-                <div class="card">
-                    <h4 class="card-title placeholder">Constraint Violations</h4>
-                    <div id="violation-summary">
-                        <div class="alert alert-info">Performance analysis will appear here.</div>
-                    </div>
-                </div>
-                <div class="card">
-                    <h4 class="card-title placeholder">Recommendation Score</h4>
-                    <div id="recommendation-score">
-                        <div class="alert alert-info">Recommendation scoring will appear here.</div>
-                    </div>
                 </div>
             </div>
         </div>
