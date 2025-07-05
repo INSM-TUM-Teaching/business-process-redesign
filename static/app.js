@@ -200,23 +200,19 @@ function performChangeOperation() {
             formData.append('activity1', document.getElementById('activity1').value);
             formData.append('activity2', document.getElementById('activity2').value);
             break;
-        default:
-            alert('Please select an operation.');
-            return;
     }
 
     const modifiedMatrixDisplay = document.getElementById('modified-matrix-display');
     modifiedMatrixDisplay.innerHTML = '<div class="alert alert-info"><span class="loading"></span> Performing operation...</div>';
 
-    fetch('/api/change_operation', {
+    fetch('/api/change', {
         method: 'POST',
         body: formData
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            displayMatrix(data.original_matrix, 'original-matrix-display');
-            displayMatrix(data.modified_matrix, 'modified-matrix-display');
+            displayMatrix(data, 'modified-matrix-display');
         } else {
             modifiedMatrixDisplay.innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
         }
