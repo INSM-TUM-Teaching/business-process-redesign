@@ -59,9 +59,9 @@ def modify_dependency(
         if (from_act == from_activity and to_act == to_activity) or \
            (from_act == to_activity and to_act == from_activity):
             if existential_dep: 
-                existential_dependency = ExistentialDependency(existential_dep)
+                existential_dependency = ExistentialDependency(existential_dep, direction=existential_dependency.direction)
             if temporal_dep:
-                temporal_dependency = TemporalDependency(temporal_dep)
+                temporal_dependency = TemporalDependency(temporal_dep, direction=temporal_dependency.direction)
 
         new_matrix.add_dependency(from_act, to_act, temporal_dependency, existential_dependency)
 

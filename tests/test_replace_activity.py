@@ -5,6 +5,7 @@ from dependencies import (
     ExistentialDependency,
     TemporalType,
     ExistentialType,
+    Direction,
 )
 from change_operations.replace_operation import replace_activity
 
@@ -13,18 +14,18 @@ def test_replace_activity():
     matrix = AdjacencyMatrix(activities=["A", "B", "C"])
     matrix.add_dependency(
         "A", "B",
-        TemporalDependency(TemporalType.DIRECT),
-        ExistentialDependency(ExistentialType.EQUIVALENCE)
+        TemporalDependency(TemporalType.DIRECT, direction=Direction.FORWARD),
+        ExistentialDependency(ExistentialType.EQUIVALENCE, direction=Direction.BOTH)
     )
     matrix.add_dependency(
         "B", "C",
-        TemporalDependency(TemporalType.DIRECT),
-        ExistentialDependency(ExistentialType.EQUIVALENCE)
+        TemporalDependency(TemporalType.DIRECT, direction=Direction.FORWARD),
+        ExistentialDependency(ExistentialType.EQUIVALENCE, direction=Direction.BOTH)
     )
     matrix.add_dependency(
         "A", "C",
-        TemporalDependency(TemporalType.EVENTUAL),
-        ExistentialDependency(ExistentialType.EQUIVALENCE)
+        TemporalDependency(TemporalType.EVENTUAL, direction=Direction.FORWARD),
+        ExistentialDependency(ExistentialType.EQUIVALENCE, direction=Direction.BOTH)
     )
     
     # Delete activity B

@@ -5,6 +5,7 @@ from dependencies import (
     ExistentialDependency,
     TemporalType,
     ExistentialType,
+    Direction,
 )
 from change_operations.modify_operation import modify_dependency
 
@@ -16,33 +17,33 @@ def test_modify_dependency():
     # define the matrix with dependencies 
     matrix.add_dependency(
         "A", "B",
-        TemporalDependency(TemporalType.DIRECT),
-        ExistentialDependency(ExistentialType.EQUIVALENCE)
+        TemporalDependency(TemporalType.DIRECT, direction=Direction.FORWARD),
+        ExistentialDependency(ExistentialType.EQUIVALENCE, direction=Direction.BOTH)
     )
     matrix.add_dependency(
         "A", "C",
-        TemporalDependency(TemporalType.EVENTUAL),
-        ExistentialDependency(ExistentialType.EQUIVALENCE)
+        TemporalDependency(TemporalType.EVENTUAL, direction=Direction.FORWARD),
+        ExistentialDependency(ExistentialType.EQUIVALENCE, direction=Direction.BOTH)
     )
     matrix.add_dependency(
         "B", "A",
-        TemporalDependency(TemporalType.DIRECT),
-        ExistentialDependency(ExistentialType.EQUIVALENCE)
+        TemporalDependency(TemporalType.DIRECT, direction=Direction.BACKWARD),
+        ExistentialDependency(ExistentialType.EQUIVALENCE, direction=Direction.BOTH)
     )
     matrix.add_dependency(
         "B", "C",
-        TemporalDependency(TemporalType.DIRECT),
-        ExistentialDependency(ExistentialType.EQUIVALENCE)
+        TemporalDependency(TemporalType.DIRECT, direction=Direction.FORWARD),
+        ExistentialDependency(ExistentialType.EQUIVALENCE, direction=Direction.BOTH)
     )
     matrix.add_dependency(
         "C", "A",
-        TemporalDependency(TemporalType.EVENTUAL),
-        ExistentialDependency(ExistentialType.EQUIVALENCE)
+        TemporalDependency(TemporalType.EVENTUAL, direction=Direction.BACKWARD),
+        ExistentialDependency(ExistentialType.EQUIVALENCE, direction=Direction.BOTH)
     )
     matrix.add_dependency(
         "C", "B",
-        TemporalDependency(TemporalType.EVENTUAL),
-        ExistentialDependency(ExistentialType.EQUIVALENCE)
+        TemporalDependency(TemporalType.EVENTUAL, direction=Direction.BACKWARD),
+        ExistentialDependency(ExistentialType.EQUIVALENCE, direction=Direction.BOTH)
     )
 
     # create comparison matrix which we use to check the change operation 
@@ -51,33 +52,33 @@ def test_modify_dependency():
     # define the matrix with dependencies 
     expected_matrix.add_dependency(
         "A", "B",
-        TemporalDependency(TemporalType.DIRECT),
-        ExistentialDependency(ExistentialType.NEGATED_EQUIVALENCE)
+        TemporalDependency(TemporalType.DIRECT, direction=Direction.FORWARD),
+        ExistentialDependency(ExistentialType.NEGATED_EQUIVALENCE, direction=Direction.BOTH)
     )
     expected_matrix.add_dependency(
         "A", "C",
-        TemporalDependency(TemporalType.EVENTUAL),
-        ExistentialDependency(ExistentialType.EQUIVALENCE)
+        TemporalDependency(TemporalType.EVENTUAL, direction=Direction.FORWARD),
+        ExistentialDependency(ExistentialType.EQUIVALENCE, direction=Direction.BOTH)
     )
     expected_matrix.add_dependency(
         "B", "A",
-        TemporalDependency(TemporalType.DIRECT),
-        ExistentialDependency(ExistentialType.NEGATED_EQUIVALENCE)
+        TemporalDependency(TemporalType.DIRECT, direction=Direction.BACKWARD),
+        ExistentialDependency(ExistentialType.NEGATED_EQUIVALENCE, direction=Direction.BOTH)
     )
     expected_matrix.add_dependency(
         "B", "C",
-        TemporalDependency(TemporalType.DIRECT),
-        ExistentialDependency(ExistentialType.EQUIVALENCE)
+        TemporalDependency(TemporalType.DIRECT, direction=Direction.FORWARD),
+        ExistentialDependency(ExistentialType.EQUIVALENCE, direction=Direction.BOTH)
     )
     expected_matrix.add_dependency(
         "C", "A",
-        TemporalDependency(TemporalType.EVENTUAL),
-        ExistentialDependency(ExistentialType.EQUIVALENCE)
+        TemporalDependency(TemporalType.EVENTUAL, direction=Direction.BACKWARD),
+        ExistentialDependency(ExistentialType.EQUIVALENCE, direction=Direction.BOTH)
     )
     expected_matrix.add_dependency(
         "C", "B",
-        TemporalDependency(TemporalType.EVENTUAL),
-        ExistentialDependency(ExistentialType.EQUIVALENCE)
+        TemporalDependency(TemporalType.EVENTUAL, direction=Direction.BACKWARD),
+        ExistentialDependency(ExistentialType.EQUIVALENCE, direction=Direction.BOTH)
     )
 
     # perform the test whether the function returns the expected matrix 
