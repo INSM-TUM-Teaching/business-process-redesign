@@ -30,7 +30,7 @@ def locked_dependencies_preserved(initial_matrix: AdjacencyMatrix, modified_matr
             # TODO also check for the other direction (target, source) that it holds, can be done if the directions are implemented 
             if (source, target) in locked_dependencies:
                 # get the modified dependency and compare it to the initial one 
-                (modi_temp_dep, modi_exist_dep) = modified_dependencies(source, target)
+                (modi_temp_dep, modi_exist_dep) = modified_dependencies.get((source, target))
                 (temporal_dependency, existential_dependency) = initial_dependencies.get((source, target))
 
                 # get for which dependencies we must check 
@@ -84,4 +84,53 @@ def locked_dependencies_preserved(initial_matrix: AdjacencyMatrix, modified_matr
         # if all of the checks pass and the modified matrix fullfills the given conditions
         return True
 
-        
+def get_violated_locked_dependencies(
+    initial_matrix: AdjacencyMatrix,
+    modified_matrix: AdjacencyMatrix,
+    locked_dependencies: Dict[Tuple[str, str], Tuple[bool, bool]],
+    deletion_allowed: bool
+) -> Dict[Tuple[str, str], Tuple[bool, bool]]:
+    """
+    Returns a dictionary of violated locked dependencies, indicating whether the temporal and/or existential 
+    constraint was violated for each dependency.
+
+    Args:
+        initial_matrix: The adjacency matrix before performing the change operation.
+        modified_matrix: The adjacency matrix after performing the change operation.
+        locked_dependencies: Dictionary where key is (source, target) and value is (temporal_locked, existential_locked).
+        deletion_allowed: If true, deletion of a dependency due to deletion of an activity is allowed.
+
+    Returns:
+        A dictionary mapping (source, target) to a tuple (temporal_violated, existential_violated). It so indictaes which dependencies were violated
+    """
+    violations: Dict[Tuple[str, str], Tuple[bool, bool]] = {}
+    initial_dependencies = initial_matrix.get_dependencies()
+    modified_dependencies = modified_matrix.get_dependencies()
+
+
+    for (source, target), (temp_locked, exist_locked) in locked_dependencies.items():
+        temporal_violated = False
+        existential_violated = False
+
+        # Handle deletion case
+        if not deletion_allowed:
+            if source not in modified_matrix.get_activities() or target not in modified_matrix.get_activities():
+                if temp_locked:
+                    temporal_violated = True
+                if exist_locked:
+                    existential_violated = True
+                violations[(source, target)] = (temporal_violated, existential_violated)
+
+        # Otherwise, check if the locked parts changed
+        modi_temp_dep, modi_exist_dep = modified_matrix.get_dependency(source, target)
+        temporal_dependency, existential_dependency = initial_dependencies.get((source, target), (None, None))
+
+        if temp_locked and modi_temp_dep != temporal_dependency:
+            temporal_violated = True
+        if exist_locked and modi_exist_dep != existential_dependency:
+            existential_violated = True
+
+        if temporal_violated or existential_violated:
+            violations[(source, target)] = (temporal_violated, existential_violated)
+
+    return violations  
