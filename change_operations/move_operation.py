@@ -79,7 +79,10 @@ def move_activity_in_variants(
         if (source == activity) or (target == activity):
             continue
         dependencies_after_delete[(source,target)] = total_dependencies.get((source,target))
-    activities.remove(activity)
-    new_variants = insert_into_variants(activity, dependencies, dependencies_after_delete, activities, new_variants)
+    try:
+        activities.remove(activity)
+        new_variants = insert_into_variants(activity, dependencies, dependencies_after_delete, activities, new_variants)
+    except ValueError as e:
+        raise ValueError(f"The input is invalid: {e}")
 
     return new_variants

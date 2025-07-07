@@ -14,6 +14,35 @@ from acceptance_variants import (
 )
 from traces_to_matrix import traces_to_adjacency_matrix
 
+def split_dependencies(
+    dependencies: Dict[
+        Tuple[str, str],
+        Tuple[Optional[TemporalDependency], Optional[ExistentialDependency]],
+    ]
+) -> Tuple[
+    Dict[Tuple[str, str], TemporalDependency],
+    Dict[Tuple[str, str], ExistentialDependency],
+]:
+    """
+    Splits a dictionary of combined dependencies into separate dictionaries
+    for temporal and existential dependencies.
+
+    Args:
+        dependencies: Dictionary with (temporal, existential) dependency tuples.
+
+    Returns:
+        A tuple with two dictionaries: (temporal_dependencies, existential_dependencies)
+    """
+    temporal_deps: Dict[Tuple[str, str], TemporalDependency] = {}
+    existential_deps: Dict[Tuple[str, str], ExistentialDependency] = {}
+
+    for (source, target), (temp_dep, exist_dep) in dependencies.items():
+        if temp_dep:
+            temporal_deps[(source, target)] = temp_dep
+        if exist_dep:
+            existential_deps[(source, target)] = exist_dep
+
+    return temporal_deps, existential_deps
 
 def has_existential_contradiction(
     existential_deps: Dict[Tuple[str, str], ExistentialDependency],
@@ -31,20 +60,17 @@ def has_existential_contradiction(
     solver = Solver()
     variables = {}
 
-    # Collect all activity names
     activity_names = set()
     for a, b in existential_deps.keys():
         activity_names.update([a, b])
 
-    # Create z3 Boolean variables
     for name in activity_names:
         variables[name] = Bool(name)
 
-    # Add constraints
     for (a, b), dep in existential_deps.items():
         var_a = variables[a]
         var_b = variables[b]
-        
+
         if dep.type == ExistentialType.IMPLICATION:
             constraint = Implies(var_a, var_b)
         elif dep.type == ExistentialType.EQUIVALENCE:
@@ -56,13 +82,12 @@ def has_existential_contradiction(
         elif dep.type == ExistentialType.OR:
             constraint = Or(var_a, var_b)
         else:
-            constraint = True  # Independence
+            constraint = True
 
         solver.add(constraint)
 
     result = solver.check()
     return not (result == sat)
-
 
 def dfs(
     temporal_deps: Dict[Tuple[str, str], TemporalDependency],
@@ -76,7 +101,7 @@ def dfs(
         temporal_deps: The temporal dependencies among the activities where there
         cur_activity: The activity to perform the next step for
         visited: Set of activities which have already been visited
-    
+
     Returns:
         The set of activities which have been visited.
 
@@ -89,11 +114,10 @@ def dfs(
         (before, after) = temporal_dep
         if after == cur_activity:
             if before in visited:
-                raise RecursionError
+                raise RecursionError(f"Temporal contradiction: cycle detected between '{before}' and '{cur_activity}'")
             visited.add(before)
             visited = visited | dfs(temporal_deps, before, visited)
     return visited
-
 
 def has_temporal_contradiction(
     temporal_deps: Dict[Tuple[str, str], TemporalDependency],
@@ -116,8 +140,6 @@ def has_temporal_contradiction(
         True, if it has a contradiction
         False, if there is no contradiction
     """
-
-    # Get sets of activities directly before and after
     after = set()
     before = set()
     for source, target in temporal_deps:
@@ -134,8 +156,6 @@ def has_temporal_contradiction(
         if satisfies_existential_constraints(variant_activities, activities, existential_deps):
             continue
 
-        # check if there is max 1 before and max 1 after in each variant
-        # check if with a direct before and after if there is something in between, then there is a contradiction.
         n = 0
         b_pos = -1
         for b in before:
@@ -155,15 +175,14 @@ def has_temporal_contradiction(
         if (a_pos != -1) and (b_pos != -1):
             if (a_pos != (b_pos + 1)):
                 return True
-    # Check for loops
+
     try:
         for a in activities:
             dfs(temporal_deps, a, set())
-    except RecursionError:
+    except RecursionError as e:
         return True
 
     return False
-
 
 def is_valid_input(
     activities,
@@ -189,23 +208,15 @@ def is_valid_input(
         True: If input is valid
         False: If input is invalid
     """
-    total_temporal_deps: Dict[Tuple[str, str], TemporalDependency] = {}
-    total_existential_deps: Dict[Tuple[str, str], ExistentialDependency] = {}
-
-    for (source, target), (temp_dep, exist_dep) in total_dependencies.items():
-        if temp_dep:
-            total_temporal_deps[(source, target)] = temp_dep
-        if exist_dep:
-            total_existential_deps[(source, target)] = exist_dep
+    temporal_deps, existential_deps = split_dependencies(total_dependencies)
 
     if activity in activities:
-        return False
-    if has_existential_contradiction(total_existential_deps):
-        return False
-    if has_temporal_contradiction(total_temporal_deps, total_existential_deps, new_activities, activity, variants):
-        return False
+        raise ValueError(f"The activity '{activity}' is already present in the matrix.")
+    if has_existential_contradiction(existential_deps):
+        raise ValueError("Existential dependencies cause a contradiction.")
+    if has_temporal_contradiction(temporal_deps, existential_deps, new_activities, activity, variants):
+        raise ValueError("Temporal dependencies cause a contradiction.")
     return True
-
 
 def search_valid_positions_to_insert(
     variant: List[str],
@@ -225,14 +236,12 @@ def search_valid_positions_to_insert(
     """
     new_variants: List[List[str]] = []
 
-    # Insert at any position and check if temporals are fullfilled
     for pos in range(len(variant) + 1):
         new_variant = variant.copy()
         new_variant.insert(pos, activity)
         if satisfies_temporal_constraints(new_variant, temporal_deps):
             new_variants.append(new_variant.copy())
     return new_variants
-
 
 def insert_activity(
     matrix: AdjacencyMatrix,
@@ -263,11 +272,9 @@ def insert_activity(
     variants = generate_acceptance_variants(matrix)
     try:
         new_variants =  insert_into_variants(activity, dependencies, total_dependencies, matrix.get_activities(), variants)
-    except:
-        raise ValueError("The input is invalid")
+    except ValueError as e:
+        raise ValueError(f"The input is invalid: {e}")
     return traces_to_adjacency_matrix(new_variants)
-
-
 
 def insert_into_variants(
     activity: str,
@@ -301,23 +308,15 @@ def insert_into_variants(
     Raises:
         ValueError: If input produces contradiction
     """
-
     new_activities = activities.copy()
     new_activities.append(activity)
 
-    if not is_valid_input(
-        activities, new_activities, activity, variants, total_dependencies
-    ):
-        raise ValueError("The input is invalid.")
+    try:
+        is_valid_input(activities, new_activities, activity, variants, total_dependencies)
+    except ValueError as e:
+        raise ValueError({e}) from e
 
-    temporal_deps: Dict[Tuple[str, str], TemporalDependency] = {}
-    existential_deps: Dict[Tuple[str, str], ExistentialDependency] = {}
-
-    for (source, target), (temp_dep, exist_dep) in dependencies.items():
-        if temp_dep:
-            temporal_deps[(source, target)] = temp_dep
-        if exist_dep:
-            existential_deps[(source, target)] = exist_dep
+    temporal_deps, existential_deps = split_dependencies(dependencies)
 
     new_variants = []
 
