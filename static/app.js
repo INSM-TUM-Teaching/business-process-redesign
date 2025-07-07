@@ -125,17 +125,6 @@ function updateOperationInputs() {
                     <input type="file" id="collapsed_matrix_file" class="form-control" accept=".yaml,.yml">
                 </div>`;
             break;
-        case 'modify':
-            inputsDiv.innerHTML = `
-                <div class="form-group">
-                    <label class="form-label" for="activity_to_modify">Activity to Modify:</label>
-                    <input type="text" id="activity_to_modify" class="form-control">
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="new_activity_name">New Activity Name:</label>
-                    <input type="text" id="new_activity_name" class="form-control">
-                </div>`;
-            break;
         case 'replace':
             inputsDiv.innerHTML = `
                 <div class="form-group">
@@ -184,10 +173,6 @@ function performChangeOperation() {
         case 'de-collapse':
             formData.append('collapsed_activity', document.getElementById('collapsed_activity').value);
             formData.append('collapsed_matrix_file', document.getElementById('collapsed_matrix_file').files[0]);
-            break;
-        case 'modify':
-            formData.append('activity_to_modify', document.getElementById('activity_to_modify').value);
-            formData.append('new_activity_name', document.getElementById('new_activity_name').value);
             break;
         case 'replace':
             formData.append('old_activity', document.getElementById('old_activity').value);
