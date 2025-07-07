@@ -70,24 +70,97 @@ function displayMatrix(data, elementId) {
     const matrixDisplay = document.getElementById(elementId);
     const activities = data.activities;
     const matrix = data.matrix;
+    const cellClasses = data.cell_classes || {};
 
     let tableHtml = '<table class="matrix-table"><tr><th></th>';
     
     activities.forEach(activity => {
-        tableHtml += `<th>${activity}</th>`;
+        let headerClass = '';
+        if (data.diff_info) {
+            if (data.diff_info.added_activities && data.diff_info.added_activities.includes(activity)) {
+                headerClass = 'diff-added-activity';
+            } else if (data.diff_info.removed_activities && data.diff_info.removed_activities.includes(activity)) {
+                headerClass = 'diff-removed-activity';
+            }
+        }
+        tableHtml += `<th class="${headerClass}">${activity}</th>`;
     });
     tableHtml += '</tr>';
 
     activities.forEach(fromActivity => {
-        tableHtml += `<tr><th>${fromActivity}</th>`;
+        let rowHeaderClass = '';
+        if (data.diff_info) {
+            if (data.diff_info.added_activities && data.diff_info.added_activities.includes(fromActivity)) {
+                rowHeaderClass = 'diff-added-activity';
+            } else if (data.diff_info.removed_activities && data.diff_info.removed_activities.includes(fromActivity)) {
+                rowHeaderClass = 'diff-removed-activity';
+            }
+        }
+        tableHtml += `<tr><th class="${rowHeaderClass}">${fromActivity}</th>`;
+        
         activities.forEach(toActivity => {
-            tableHtml += `<td>${matrix[fromActivity][toActivity] || ''}</td>`;
+            const cellClass = cellClasses[fromActivity] ? cellClasses[fromActivity][toActivity] || '' : '';
+            tableHtml += `<td class="${cellClass}">${matrix[fromActivity][toActivity] || ''}</td>`;
         });
         tableHtml += '</tr>';
     });
 
     tableHtml += '</table>';
+    
+    if (data.diff_info && (data.diff_info.added_activities.length > 0 || 
+                          data.diff_info.removed_activities.length > 0 || 
+                          data.diff_info.modified_cells.length > 0)) {
+        tableHtml += createDiffLegend(data.diff_info);
+    }
+    
     matrixDisplay.innerHTML = tableHtml;
+}
+
+function createDiffLegend(diffInfo) {
+    let legendHtml = '<div class="diff-legend">';
+    
+    if (diffInfo.added_activities.length > 0) {
+        legendHtml += `
+            <div class="diff-legend-item">
+                <div class="diff-legend-color added-activity"></div>
+                <span>Added Activities (${diffInfo.added_activities.length})</span>
+            </div>`;
+    }
+    
+    if (diffInfo.removed_activities.length > 0) {
+        legendHtml += `
+            <div class="diff-legend-item">
+                <div class="diff-legend-color removed-activity"></div>
+                <span>Removed Activities (${diffInfo.removed_activities.length})</span>
+            </div>`;
+    }
+    
+    if (diffInfo.added_cells.length > 0) {
+        legendHtml += `
+            <div class="diff-legend-item">
+                <div class="diff-legend-color added"></div>
+                <span>Added Dependencies</span>
+            </div>`;
+    }
+    
+    if (diffInfo.removed_cells.length > 0) {
+        legendHtml += `
+            <div class="diff-legend-item">
+                <div class="diff-legend-color removed"></div>
+                <span>Removed Dependencies</span>
+            </div>`;
+    }
+    
+    if (diffInfo.modified_cells.length > 0) {
+        legendHtml += `
+            <div class="diff-legend-item">
+                <div class="diff-legend-color modified"></div>
+                <span>Modified Dependencies (${diffInfo.modified_cells.length})</span>
+            </div>`;
+    }
+    
+    legendHtml += '</div>';
+    return legendHtml;
 }
 
 function updateOperationInputs() {
@@ -187,7 +260,10 @@ function performChangeOperation() {
             break;
     }
 
+    const originalMatrixDisplay = document.getElementById('original-matrix-display');
     const modifiedMatrixDisplay = document.getElementById('modified-matrix-display');
+    
+    originalMatrixDisplay.innerHTML = '<div class="alert alert-info"><span class="loading"></span> Performing operation...</div>';
     modifiedMatrixDisplay.innerHTML = '<div class="alert alert-info"><span class="loading"></span> Performing operation...</div>';
 
     fetch('/api/change', {
@@ -197,13 +273,17 @@ function performChangeOperation() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            displayMatrix(data, 'modified-matrix-display');
+            displayMatrix(data.original, 'original-matrix-display');
+            displayMatrix(data.modified, 'modified-matrix-display');
+            console.log('Diff Info:', data.diff_info);
         } else {
+            originalMatrixDisplay.innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
             modifiedMatrixDisplay.innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
         }
     })
     .catch(error => {
         console.error('Error:', error);
+        originalMatrixDisplay.innerHTML = '<div class="alert alert-danger">An unexpected error occurred.</div>';
         modifiedMatrixDisplay.innerHTML = '<div class="alert alert-danger">An unexpected error occurred.</div>';
     });
 }

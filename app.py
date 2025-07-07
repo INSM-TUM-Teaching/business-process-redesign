@@ -25,61 +25,123 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 current_matrix = None
 original_matrix = None
 
-@app.route("/")
-def home():
-    return render_template("home.html")
-
-@app.route("/api/process", methods=["POST"])
-def process_input():
-    """Process either traces or a YAML file to generate an adjacency matrix."""
-    global current_matrix, original_matrix
+def calculate_matrix_diff(original_matrix, modified_matrix):
+    """Calculate differences between two matrices for highlighting purposes."""
+    diff_info = {
+        'added_activities': [],
+        'removed_activities': [],
+        'modified_cells': [],
+        'added_cells': [],
+        'removed_cells': []
+    }
     
-    try:
-        if 'file' in request.files and request.files['file'].filename != '':
-            file = request.files['file']
-            if file and (file.filename.endswith('.yaml') or file.filename.endswith('.yml')):
-                filename = secure_filename(file.filename)
-                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                file.save(filepath)
-                
-                original_matrix = parse_yaml_to_adjacency_matrix(filepath)
-                current_matrix = copy.deepcopy(original_matrix)
-                
-                os.remove(filepath) # Clean up the temporary file
-            else:
-                return jsonify({"success": False, "error": "Invalid file type. Please upload a YAML file."})
-
-        else:
-            data = request.get_json()
-            traces = data.get('traces', [])
-            if not traces:
-                return jsonify({"success": False, "error": "No traces provided"})
+    if not original_matrix or not modified_matrix:
+        return diff_info
+    
+    original_activities = set(original_matrix.activities)
+    modified_activities = set(modified_matrix.activities)
+    
+    diff_info['added_activities'] = list(modified_activities - original_activities)
+    diff_info['removed_activities'] = list(original_activities - modified_activities)
+    
+    common_activities = original_activities & modified_activities
+    
+    for from_activity in common_activities:
+        for to_activity in common_activities:
+            original_dep = original_matrix.get_dependency(from_activity, to_activity)
+            modified_dep = modified_matrix.get_dependency(from_activity, to_activity)
             
-            original_matrix = traces_to_adjacency_matrix(traces)
-            current_matrix = copy.deepcopy(original_matrix)
+            original_str = format_dependency_for_comparison(original_dep)
+            modified_str = format_dependency_for_comparison(modified_dep)
+            
+            if original_str != modified_str:
+                diff_info['modified_cells'].append((from_activity, to_activity))
+    
+    for activity in diff_info['added_activities']:
+        for other_activity in modified_activities:
+            if activity != other_activity:
+                diff_info['added_cells'].append((activity, other_activity))
+                diff_info['added_cells'].append((other_activity, activity))
+    
+    for activity in diff_info['removed_activities']:
+        for other_activity in original_activities:
+            if activity != other_activity:
+                diff_info['removed_cells'].append((activity, other_activity))
+                diff_info['removed_cells'].append((other_activity, activity))
+    
+    return diff_info
 
-        return jsonify({"success": True, "message": "Matrix generated successfully."})
+def format_dependency_for_comparison(dep_tuple):
+    """Format dependency tuple for comparison purposes."""
+    if not dep_tuple:
+        return ""
+    
+    temporal_dep, existential_dep = dep_tuple
+    
+    is_temporal_independence = False
+    temporal_str = "-"
+    if temporal_dep:
+        if temporal_dep.type == TemporalType.INDEPENDENCE:
+            is_temporal_independence = True
+        else:
+            direction_symbol = "-"
+            if temporal_dep.direction == Direction.FORWARD:
+                direction_symbol = "≺"
+            elif temporal_dep.direction == Direction.BACKWARD:
+                direction_symbol = "≻"
+            
+            type_symbol = ""
+            if temporal_dep.type == TemporalType.DIRECT:
+                type_symbol = "d"
+            
+            temporal_str = f"{direction_symbol}{type_symbol}"
 
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
+    is_existential_independence = False
+    existential_str = "-"
+    if existential_dep:
+        if existential_dep.type == ExistentialType.INDEPENDENCE:
+            is_existential_independence = True
+        elif existential_dep.type == ExistentialType.IMPLICATION:
+            if existential_dep.direction == Direction.FORWARD:
+                existential_str = "=>"
+            elif existential_dep.direction == Direction.BACKWARD:
+                existential_str = "<="
+        elif existential_dep.type == ExistentialType.EQUIVALENCE:
+            existential_str = "⇔"
+        elif existential_dep.type == ExistentialType.NEGATED_EQUIVALENCE:
+            existential_str = "⇎"
+        elif existential_dep.type == ExistentialType.NAND:
+            existential_str = "⊼"
+        elif existential_dep.type == ExistentialType.OR:
+            existential_str = "∨"
 
-@app.route("/api/matrix", methods=["GET"])
-def get_matrix():
-    """Return the current adjacency matrix."""
-    if current_matrix is None:
-        return jsonify({"success": False, "error": "Matrix not generated yet."})
+    if is_temporal_independence and is_existential_independence:
+        return "-,-"
+    elif temporal_str != "-" or existential_str != "-":
+        return f"{temporal_str},{existential_str}"
+    else:
+        return ""
 
-    activities = current_matrix.activities
+def format_matrix_display(matrix, diff_info=None, is_original=False):
+    """Format matrix display with optional diff highlighting."""
+    if not matrix:
+        return {"activities": [], "matrix": {}, "diff_info": {}}
+    
+    activities = matrix.activities
     matrix_display = {}
-
+    cell_classes = {}
+    
     for from_activity in activities:
         matrix_display[from_activity] = {}
+        cell_classes[from_activity] = {}
+        
         for to_activity in activities:
             if from_activity == to_activity:
                 matrix_display[from_activity][to_activity] = "X"
+                cell_classes[from_activity][to_activity] = "diagonal"
                 continue
 
-            dep_tuple = current_matrix.get_dependency(from_activity, to_activity)
+            dep_tuple = matrix.get_dependency(from_activity, to_activity)
             if dep_tuple:
                 temporal_dep, existential_dep = dep_tuple
                 
@@ -128,11 +190,80 @@ def get_matrix():
                     matrix_display[from_activity][to_activity] = ""
             else:
                 matrix_display[from_activity][to_activity] = ""
+            
+            cell_class = ""
+            if diff_info:
+                if is_original:
+                    if (from_activity, to_activity) in diff_info['removed_cells']:
+                        cell_class = "diff-removed"
+                    elif from_activity in diff_info['removed_activities'] or to_activity in diff_info['removed_activities']:
+                        cell_class = "diff-removed-activity"
+                else:
+                    if (from_activity, to_activity) in diff_info['added_cells']:
+                        cell_class = "diff-added"
+                    elif (from_activity, to_activity) in diff_info['modified_cells']:
+                        cell_class = "diff-modified"
+                    elif from_activity in diff_info['added_activities'] or to_activity in diff_info['added_activities']:
+                        cell_class = "diff-added-activity"
+            
+            cell_classes[from_activity][to_activity] = cell_class
+    
+    return {
+        "activities": activities,
+        "matrix": matrix_display,
+        "cell_classes": cell_classes,
+        "diff_info": diff_info or {}
+    }
 
+@app.route("/")
+def home():
+    return render_template("home.html")
+
+@app.route("/api/process", methods=["POST"])
+def process_input():
+    """Process either traces or a YAML file to generate an adjacency matrix."""
+    global current_matrix, original_matrix
+    
+    try:
+        if 'file' in request.files and request.files['file'].filename != '':
+            file = request.files['file']
+            if file and (file.filename.endswith('.yaml') or file.filename.endswith('.yml')):
+                filename = secure_filename(file.filename)
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(filepath)
+                
+                original_matrix = parse_yaml_to_adjacency_matrix(filepath)
+                current_matrix = copy.deepcopy(original_matrix)
+                
+                os.remove(filepath) # Clean up the temporary file
+            else:
+                return jsonify({"success": False, "error": "Invalid file type. Please upload a YAML file."})
+
+        else:
+            data = request.get_json()
+            traces = data.get('traces', [])
+            if not traces:
+                return jsonify({"success": False, "error": "No traces provided"})
+            
+            original_matrix = traces_to_adjacency_matrix(traces)
+            current_matrix = copy.deepcopy(original_matrix)
+
+        return jsonify({"success": True, "message": "Matrix generated successfully."})
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@app.route("/api/matrix", methods=["GET"])
+def get_matrix():
+    """Return the current adjacency matrix."""
+    if current_matrix is None:
+        return jsonify({"success": False, "error": "Matrix not generated yet."})
+
+    matrix_data = format_matrix_display(current_matrix)
     return jsonify({
         "success": True,
-        "activities": activities,
-        "matrix": matrix_display
+        "activities": matrix_data["activities"],
+        "matrix": matrix_data["matrix"]
     })
 
 @app.route("/api/change", methods=["POST"])
@@ -245,10 +376,23 @@ def change_matrix():
                     else:
                         matrix_display[from_activity][to_activity] = ""
             
+            diff_info = calculate_matrix_diff(original_matrix, modified_matrix)
+            formatted_original = format_matrix_display(original_matrix, diff_info, is_original=True)
+            formatted_modified = format_matrix_display(modified_matrix, diff_info, is_original=False)
+            
             return jsonify({
                 "success": True,
-                "activities": activities,
-                "matrix": matrix_display
+                "original": {
+                    "activities": formatted_original["activities"],
+                    "matrix": formatted_original["matrix"],
+                    "cell_classes": formatted_original["cell_classes"]
+                },
+                "modified": {
+                    "activities": formatted_modified["activities"],
+                    "matrix": formatted_modified["matrix"],
+                    "cell_classes": formatted_modified["cell_classes"]
+                },
+                "diff_info": diff_info
             })
         else:
             return jsonify({"success": False, "error": "Operation not supported or failed."})
