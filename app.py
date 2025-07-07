@@ -25,6 +25,8 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 current_matrix = None
 original_matrix = None
 
+last_modified_matrix = None
+
 def calculate_matrix_diff(original_matrix, modified_matrix):
     """Calculate differences between two matrices for highlighting purposes."""
     diff_info = {
@@ -269,7 +271,7 @@ def get_matrix():
 @app.route("/api/change", methods=["POST"])
 def change_matrix():
     """Perform a change operation on the current matrix."""
-    global current_matrix, original_matrix
+    global current_matrix, original_matrix, last_modified_matrix
     if original_matrix is None:
         return jsonify({"success": False, "error": "Matrix not generated yet."})
 
@@ -317,6 +319,9 @@ def change_matrix():
                 return jsonify({"success": False, "error": "Invalid file type for collapsed matrix."})
 
         if modified_matrix:
+            # Store the modified matrix for export
+            last_modified_matrix = modified_matrix
+            
             activities = modified_matrix.activities
             matrix_display = {}
             for from_activity in activities:
@@ -380,6 +385,8 @@ def change_matrix():
             formatted_original = format_matrix_display(original_matrix, diff_info, is_original=True)
             formatted_modified = format_matrix_display(modified_matrix, diff_info, is_original=False)
             
+            last_modified_matrix = modified_matrix
+            
             return jsonify({
                 "success": True,
                 "original": {
@@ -397,6 +404,104 @@ def change_matrix():
         else:
             return jsonify({"success": False, "error": "Operation not supported or failed."})
 
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@app.route("/api/export", methods=["GET"])
+def export_matrix():
+    """Export the last modified matrix as YAML."""
+    global last_modified_matrix
+    
+    if last_modified_matrix is None:
+        return jsonify({"success": False, "error": "No modified matrix available to export."})
+    
+    try:
+        yaml_data = {
+            "metadata": {
+                "format_version": "1.0",
+                "description": "Process adjacency matrix with temporal and existential dependencies",
+                "activities": last_modified_matrix.activities
+            },
+            "dependencies": []
+        }
+        
+        for from_activity in last_modified_matrix.activities:
+            for to_activity in last_modified_matrix.activities:
+                if from_activity != to_activity:
+                    dep_tuple = last_modified_matrix.get_dependency(from_activity, to_activity)
+                    if dep_tuple:
+                        temporal_dep, existential_dep = dep_tuple
+                        
+                        # Only add non-empty dependencies
+                        if temporal_dep or existential_dep:
+                            dependency_entry = {
+                                "from": from_activity,
+                                "to": to_activity
+                            }
+                            
+                            if temporal_dep:
+                                temp_type = temporal_dep.type.name.lower()
+                                temp_direction = temporal_dep.direction.name.lower()
+                                
+                                if temporal_dep.type == TemporalType.INDEPENDENCE:
+                                    symbol = "-"
+                                    direction = "both"
+                                elif temporal_dep.type == TemporalType.DIRECT:
+                                    symbol = "≺_d"
+                                    direction = temp_direction
+                                else:
+                                    symbol = "≺_e"
+                                    direction = temp_direction
+                                
+                                dependency_entry["temporal"] = {
+                                    "type": temp_type,
+                                    "symbol": symbol,
+                                    "direction": direction
+                                }
+                            
+                            if existential_dep:
+                                exist_type = existential_dep.type.name.lower()
+                                exist_direction = existential_dep.direction.name.lower()
+                                
+                                if existential_dep.type == ExistentialType.INDEPENDENCE:
+                                    symbol = "-"
+                                    direction = "both"
+                                elif existential_dep.type == ExistentialType.IMPLICATION:
+                                    symbol = "⇒"
+                                    direction = exist_direction
+                                elif existential_dep.type == ExistentialType.EQUIVALENCE:
+                                    symbol = "⇔"
+                                    direction = "both"
+                                elif existential_dep.type == ExistentialType.NEGATED_EQUIVALENCE:
+                                    symbol = "⇎"
+                                    direction = "both"
+                                elif existential_dep.type == ExistentialType.NAND:
+                                    symbol = "|"
+                                    direction = "both"
+                                elif existential_dep.type == ExistentialType.OR:
+                                    symbol = "∨"
+                                    direction = "both"
+                                else:
+                                    symbol = "-"
+                                    direction = "both"
+                                
+                                dependency_entry["existential"] = {
+                                    "type": exist_type,
+                                    "symbol": symbol,
+                                    "direction": direction
+                                }
+                            
+                            yaml_data["dependencies"].append(dependency_entry)
+        
+        yaml_string = yaml.dump(yaml_data, default_flow_style=False, sort_keys=False, 
+                               allow_unicode=True, encoding=None)
+        
+        return jsonify({
+            "success": True,
+            "yaml_data": yaml_string,
+            "filename": "matrix.yaml"
+        })
+    
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
 

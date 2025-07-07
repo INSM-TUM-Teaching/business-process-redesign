@@ -263,6 +263,8 @@ function performChangeOperation() {
     const originalMatrixDisplay = document.getElementById('original-matrix-display');
     const modifiedMatrixDisplay = document.getElementById('modified-matrix-display');
     
+    document.getElementById('export-button').style.display = 'none';
+    
     originalMatrixDisplay.innerHTML = '<div class="alert alert-info"><span class="loading"></span> Performing operation...</div>';
     modifiedMatrixDisplay.innerHTML = '<div class="alert alert-info"><span class="loading"></span> Performing operation...</div>';
 
@@ -276,16 +278,47 @@ function performChangeOperation() {
             displayMatrix(data.original, 'original-matrix-display');
             displayMatrix(data.modified, 'modified-matrix-display');
             console.log('Diff Info:', data.diff_info);
+            
+            document.getElementById('export-button').style.display = 'inline-block';
         } else {
             originalMatrixDisplay.innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
             modifiedMatrixDisplay.innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
+            document.getElementById('export-button').style.display = 'none';
         }
     })
     .catch(error => {
         console.error('Error:', error);
         originalMatrixDisplay.innerHTML = '<div class="alert alert-danger">An unexpected error occurred.</div>';
         modifiedMatrixDisplay.innerHTML = '<div class="alert alert-danger">An unexpected error occurred.</div>';
+        // Hide export button on error
+        document.getElementById('export-button').style.display = 'none';
     });
+}
+
+function exportModifiedMatrix() {
+    fetch('/api/export')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const blob = new Blob([data.yaml_data], { type: 'application/x-yaml' });
+                const url = window.URL.createObjectURL(blob);
+                
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = data.filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                window.URL.revokeObjectURL(url);
+            } else {
+                alert('Export failed: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while exporting the matrix.');
+        });
 }
 
 
