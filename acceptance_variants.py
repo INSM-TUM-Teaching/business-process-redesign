@@ -5,6 +5,7 @@ from dependencies import (
     ExistentialType,
     TemporalDependency,
     ExistentialDependency,
+    Direction,
 )
 from adjacency_matrix import AdjacencyMatrix
 from constraint_logic import check_temporal_relationship, check_existential_relationship
@@ -18,25 +19,18 @@ def satisfies_existential_constraints(
     """
     Checks if a subset of activities satisfies all existential constraints.
     """
-    activity_to_index = {activity: i for i, activity in enumerate(activities)}
+    for (ai, aj), dependency in existential_dependencies.items():
+        if dependency.type == ExistentialType.INDEPENDENCE:
+            continue
 
-    for i in range(len(activities)):
-        for j in range(len(activities)):
-            ai = activities[i]
-            aj = activities[j]
+        in_subset_ai = ai in subset
+        in_subset_aj = aj in subset
+        dep_type = dependency.type
 
-            dependency = existential_dependencies.get((ai, aj))
-            # Skip if the dependency is not defined for the pair (ai, aj)
-            # or if it's an independence constraint (which is always satisfied by any subset)
-            if not dependency or dependency.type == ExistentialType.INDEPENDENCE:
-                continue
-
-            in_subset_ai = ai in subset
-            in_subset_aj = aj in subset
-            dep_type = dependency.type
-
-            if not check_existential_relationship(in_subset_ai, in_subset_aj, dep_type):
-                return False
+        if not check_existential_relationship(
+            in_subset_ai, in_subset_aj, dep_type, dependency.direction
+        ):
+            return False
 
     return True
 
@@ -78,7 +72,9 @@ def satisfies_temporal_constraints(
             pos_aj = activity_to_pos[aj]
             dep_type = dependency.type
 
-            if not check_temporal_relationship(pos_ai, pos_aj, dep_type):
+            if not check_temporal_relationship(
+                pos_ai, pos_aj, dep_type, dependency.direction
+            ):
                 return False
 
     return True
@@ -101,7 +97,7 @@ def generate_acceptance_variants(adj_matrix: AdjacencyMatrix) -> List[List[str]]
     acceptance_variants = []
     n = len(activities)
 
-    for i in range(1 << n):  # 2^n subsets
+    for i in range(1, 1 << n):  # 2^n subsets, skip empty set
         current_subset_indices = []
         for j in range(n):
             if (i >> j) & 1:  # Check if j-th bit is set

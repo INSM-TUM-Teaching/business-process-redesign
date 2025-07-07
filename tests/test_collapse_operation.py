@@ -5,6 +5,7 @@ from dependencies import (
     ExistentialDependency,
     TemporalType,
     ExistentialType,
+    Direction,
 )
 from change_operations.collapse_operation import collapse_variant_level, collapse_operation, perform_collapse_variant, get_unique_elements_between_collapse_activities
 
@@ -21,14 +22,14 @@ def test_collapse_variant_level():
     matrix = AdjacencyMatrix(activities=["A", "B", "C"])
     matrix.add_dependency(
         "C", "A",
-        TemporalDependency(TemporalType.INDEPENDENCE),
-        ExistentialDependency(ExistentialType.IMPLICATION)
+        TemporalDependency(TemporalType.INDEPENDENCE, direction=Direction.BOTH),
+        ExistentialDependency(ExistentialType.IMPLICATION, direction=Direction.FORWARD)
 
     )
     matrix.add_dependency(
         "C", "B",
-        TemporalDependency(TemporalType.INDEPENDENCE), 
-        ExistentialDependency(ExistentialType.IMPLICATION)
+        TemporalDependency(TemporalType.INDEPENDENCE, direction=Direction.BOTH), 
+        ExistentialDependency(ExistentialType.IMPLICATION, direction=Direction.FORWARD)
 
     )
     assert collapse_variant_level(matrix, variants, "X", ["A", "B"]) == [["X", "C"], ["X"]]
@@ -40,14 +41,14 @@ def test_collapse_variant_level_error():
     matrix = AdjacencyMatrix(activities=["A", "B", "C"])
     matrix.add_dependency(
         "C", "A",
-        TemporalDependency(TemporalType.EVENTUAL),
-        ExistentialDependency(ExistentialType.IMPLICATION)
+        TemporalDependency(TemporalType.EVENTUAL, direction=Direction.FORWARD),
+        ExistentialDependency(ExistentialType.IMPLICATION, direction=Direction.FORWARD)
 
     )
     matrix.add_dependency(
         "C", "B",
-        TemporalDependency(TemporalType.INDEPENDENCE), 
-        ExistentialDependency(ExistentialType.IMPLICATION)
+        TemporalDependency(TemporalType.INDEPENDENCE, direction=Direction.BOTH), 
+        ExistentialDependency(ExistentialType.IMPLICATION, direction=Direction.FORWARD)
 
     )
     with pytest.raises(ValueError, match="Activity C happens between the activities to be collapsed"):

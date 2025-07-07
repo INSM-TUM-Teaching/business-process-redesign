@@ -5,6 +5,7 @@ from dependencies import (
     ExistentialDependency,
     TemporalType,
     ExistentialType,
+    Direction,
 )
 from change_operations.swap_operation import swap_activities, swap_activities_in_variants
 
@@ -22,8 +23,8 @@ def test_swap_activities():
     matrix = AdjacencyMatrix(activities=["A", "B", "C"])
     matrix.add_dependency(
         "A", "B",
-        TemporalDependency(TemporalType.DIRECT),
-        ExistentialDependency(ExistentialType.IMPLICATION)
+        TemporalDependency(TemporalType.DIRECT, direction=Direction.FORWARD),
+        ExistentialDependency(ExistentialType.IMPLICATION, direction=Direction.FORWARD)
     )
 
     new_matrix = swap_activities(matrix, "A", "C")
@@ -36,7 +37,7 @@ def test_swap_activities():
     assert swapped_dep[1].type == ExistentialType.IMPLICATION
 
     original_dep = new_matrix.get_dependency("A", "B")
-    assert original_dep is None or original_dep[0].type == TemporalType.INDEPENDENCE
+    assert original_dep is None or original_dep[0] is None or original_dep[0].type == TemporalType.INDEPENDENCE
 
 def test_swap_nonexistent_activity():
     matrix = AdjacencyMatrix(activities=["A", "B"])
