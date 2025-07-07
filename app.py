@@ -1,6 +1,7 @@
 import sys
 import os
 import yaml
+import copy
 from werkzeug.utils import secure_filename
 from adjacency_matrix import AdjacencyMatrix, parse_yaml_to_adjacency_matrix
 
@@ -22,6 +23,7 @@ app.config['UPLOAD_FOLDER'] = 'temp_uploads'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 current_matrix = None
+original_matrix = None
 
 @app.route("/")
 def home():
@@ -30,7 +32,7 @@ def home():
 @app.route("/api/process", methods=["POST"])
 def process_input():
     """Process either traces or a YAML file to generate an adjacency matrix."""
-    global current_matrix
+    global current_matrix, original_matrix
     
     try:
         if 'file' in request.files and request.files['file'].filename != '':
@@ -40,7 +42,8 @@ def process_input():
                 filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 file.save(filepath)
                 
-                current_matrix = parse_yaml_to_adjacency_matrix(filepath)
+                original_matrix = parse_yaml_to_adjacency_matrix(filepath)
+                current_matrix = copy.deepcopy(original_matrix)
                 
                 os.remove(filepath) # Clean up the temporary file
             else:
@@ -52,7 +55,8 @@ def process_input():
             if not traces:
                 return jsonify({"success": False, "error": "No traces provided"})
             
-            current_matrix = traces_to_adjacency_matrix(traces)
+            original_matrix = traces_to_adjacency_matrix(traces)
+            current_matrix = copy.deepcopy(original_matrix)
 
         return jsonify({"success": True, "message": "Matrix generated successfully."})
 
@@ -134,9 +138,11 @@ def get_matrix():
 @app.route("/api/change", methods=["POST"])
 def change_matrix():
     """Perform a change operation on the current matrix."""
-    global current_matrix
-    if current_matrix is None:
+    global current_matrix, original_matrix
+    if original_matrix is None:
         return jsonify({"success": False, "error": "Matrix not generated yet."})
+
+    current_matrix = copy.deepcopy(original_matrix)
 
     try:
         operation = request.form.get('operation')
