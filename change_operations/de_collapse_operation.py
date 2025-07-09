@@ -64,6 +64,11 @@ def decollapse_operation(main_matrix: AdjacencyMatrix, collapsed_activity: str, 
 
     if collapsed_activity not in main_matrix.activities:
         raise ValueError(f"Activity {collapsed_activity} not found in matrix")
+    
+    # test that none of the activities of the collapsed matrix are in the current matrix
+    for activity in collapsed_matrix.get_activities():
+        if activity in main_matrix.get_activities() and activity != collapsed_activity:
+            raise ValueError(f"Activity {activity} is in matrix and collapsed matrix, activities would be defined ambigously after collapsing")
         
     # Generate variants from input matrix
     variants = generate_acceptance_variants(main_matrix)
