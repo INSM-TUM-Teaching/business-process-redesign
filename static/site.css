@@ -441,3 +441,118 @@ body {
 #acceptance-variants {
     margin-top: 1.5rem;
 }
+
+/* Diff highlighting styles for matrix cells */
+.matrix-table td.diff-added {
+    background-color: #2d5a2d !important; /* Dark green for added content */
+    border: 2px solid #4a9 !important;
+    position: relative;
+}
+
+.matrix-table td.diff-removed {
+    background-color: #5d2d2d !important; /* Dark red for removed content */
+    border: 2px solid #e74c3c !important;
+    position: relative;
+}
+
+.matrix-table td.diff-modified {
+    background-color: #4a5d2d !important; /* Dark yellow-green for modified content */
+    border: 2px solid #f39c12 !important;
+    position: relative;
+}
+
+.matrix-table td.diff-added-activity {
+    background-color: #1f4a1f !important; /* Darker green for added activities */
+    border: 2px solid #27ae60 !important;
+}
+
+.matrix-table td.diff-removed-activity {
+    background-color: #4a1f1f !important; /* Darker red for removed activities */
+    border: 2px solid #c0392b !important;
+}
+
+/* Animation for diff highlights */
+.matrix-table td.diff-added,
+.matrix-table td.diff-removed,
+.matrix-table td.diff-modified,
+.matrix-table td.diff-added-activity,
+.matrix-table td.diff-removed-activity {
+    animation: diffHighlight 0.5s ease-in-out;
+}
+
+@keyframes diffHighlight {
+    0% {
+        transform: scale(1);
+        opacity: 0.7;
+    }
+    50% {
+        transform: scale(1.05);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Legend for diff highlighting */
+.diff-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding: 1rem;
+    background: var(--bg-tertiary);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.diff-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.diff-legend-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+}
+
+.diff-legend-color.added {
+    background-color: #2d5a2d;
+    border-color: #4a9;
+}
+
+.diff-legend-color.removed {
+    background-color: #5d2d2d;
+    border-color: #e74c3c;
+}
+
+.diff-legend-color.modified {
+    background-color: #4a5d2d;
+    border-color: #f39c12;
+}
+
+.diff-legend-color.added-activity {
+    background-color: #1f4a1f;
+    border-color: #27ae60;
+}
+
+.diff-legend-color.removed-activity {
+    background-color: #4a1f1f;
+    border-color: #c0392b;
+}
+
+/* Header highlighting for added/removed activities */
+.matrix-table th.diff-added-activity {
+    background-color: #1f4a1f !important;
+    border: 2px solid #27ae60 !important;
+}
+
+.matrix-table th.diff-removed-activity {
+    background-color: #4a1f1f !important;
+    border: 2px solid #c0392b !important;
+}

@@ -1,4 +1,4 @@
-from dependencies import TemporalType, ExistentialType
+from dependencies import (Direction, ExistentialType, TemporalType)
 
 # --- Temporal Evaluation Helpers ---
 
@@ -41,11 +41,15 @@ def evaluate_or(first_present: bool, second_present: bool) -> bool:
 def check_temporal_relationship(
     source_pos: int,
     target_pos: int,
-    relationship_type: TemporalType
+    relationship_type: TemporalType,
+    direction: Direction,
 ) -> bool:
     """
     Checks if the positions of source and target satisfy the specified temporal relationship.
     """
+    if direction == Direction.BACKWARD:
+        source_pos, target_pos = target_pos, source_pos
+
     if relationship_type == TemporalType.DIRECT:
         return is_directly_follows(source_pos, target_pos)
     elif relationship_type == TemporalType.EVENTUAL:
@@ -58,11 +62,15 @@ def check_temporal_relationship(
 def check_existential_relationship(
     source_present: bool,
     target_present: bool,
-    relationship_type: ExistentialType
+    relationship_type: ExistentialType,
+    direction: Direction,
 ) -> bool:
     """
     Checks if the presence/absence of source and target satisfies the specified existential relationship.
     """
+    if direction == Direction.BACKWARD:
+        source_present, target_present = target_present, source_present
+
     if relationship_type == ExistentialType.IMPLICATION:
         return evaluate_implication(source_present, target_present)
     elif relationship_type == ExistentialType.EQUIVALENCE:
