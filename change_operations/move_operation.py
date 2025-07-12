@@ -35,10 +35,12 @@ def move_activity(
     """
     total_dependencies = matrix.get_dependencies() | dependencies
     activities = matrix.get_activities().copy()
-        
 
     variants = generate_acceptance_variants(matrix)
-    new_variants = move_activity_in_variants(activity, dependencies, variants, activities, total_dependencies)
+    try:
+        new_variants = move_activity_in_variants(activity, dependencies, variants, activities, total_dependencies)
+    except ValueError as e:
+        raise ValueError({e}) from e
     return  traces_to_adjacency_matrix(new_variants)
 
 def move_activity_in_variants(
