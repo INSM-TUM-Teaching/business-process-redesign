@@ -88,7 +88,7 @@ def test_locked_dependency_preserved_no_violations():
     locked_dependencies[("A", "B")] = (True, True)
 
     # perform the test whether the function returns the correct value - True in this case since no changes were performed 
-    assert locked_dependencies_preserved(matrix, modified_matrix, locked_dependencies, (True, True)) == True
+    assert locked_dependencies_preserved(matrix, modified_matrix, locked_dependencies, []) == True
 
 
 def test_locked_dependency_preserved_violations():  
@@ -168,7 +168,7 @@ def test_locked_dependency_preserved_violations():
     locked_dependencies[("A", "B")] = (True, True)
 
     # perform the test whether the function returns the correct value - True in this case since no changes were performed 
-    assert locked_dependencies_preserved(matrix, modified_matrix, locked_dependencies, (True, True)) == False
+    assert locked_dependencies_preserved(matrix, modified_matrix, locked_dependencies, []) == False
 
 
 def test_locked_dependency_deletion_allowed():  
@@ -238,7 +238,7 @@ def test_locked_dependency_deletion_allowed():
     locked_dependencies[("A", "B")] = (True, True)
 
     # perform the test whether the function returns the correct value - True in this case since no changes were performed 
-    assert locked_dependencies_preserved(matrix, modified_matrix, locked_dependencies, (True, True)) == True
+    assert locked_dependencies_preserved(matrix, modified_matrix, locked_dependencies, ["A", "B"]) == True
 
 
 def test_get_violated_locked_dependencies():  
@@ -322,4 +322,4 @@ def test_get_violated_locked_dependencies():
     violated_dependencies[("A", "B")] = (True, False)
 
     # perform the test whether the function returns the correct dependencies which were violated 
-    assert get_violated_locked_dependencies(matrix, modified_matrix, locked_dependencies, (True, True)) == violated_dependencies
+    assert get_violated_locked_dependencies(matrix, modified_matrix, locked_dependencies, []) == violated_dependencies
