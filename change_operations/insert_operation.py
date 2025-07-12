@@ -5,6 +5,7 @@ from dependencies import (
     ExistentialDependency,
     TemporalType,
     ExistentialType,
+    Direction,
 )
 from adjacency_matrix import AdjacencyMatrix
 from acceptance_variants import (
@@ -71,6 +72,13 @@ def has_existential_contradiction(
         var_a = variables[a]
         var_b = variables[b]
 
+        # Handle case where dep might be a tuple (temporal, existential)
+        if isinstance(dep, tuple):
+            dep = dep[1]  # Extract existential dependency from tuple
+        
+        if dep is None:
+            continue
+
         if dep.type == ExistentialType.IMPLICATION:
             constraint = Implies(var_a, var_b)
         elif dep.type == ExistentialType.EQUIVALENCE:
@@ -108,10 +116,30 @@ def dfs(
     Raises:
         RecursionError if there is a loop.
     """
-    for temporal_dep in temporal_deps:
-        if temporal_deps.get(temporal_dep).type == TemporalType.INDEPENDENCE:
+    # Convert dependencies to a normalized form to avoid processing redundant constraints
+    normalized_deps = {}
+    for (source, target), dep in temporal_deps.items():
+        if dep.type == TemporalType.INDEPENDENCE:
             continue
-        (before, after) = temporal_dep
+        
+        # Determine the actual direction based on the dependency direction
+        if dep.direction == Direction.FORWARD:
+            # source comes before target
+            before, after = source, target
+        elif dep.direction == Direction.BACKWARD:
+            # source comes after target (so target comes before source)
+            before, after = target, source
+        else:  # Direction.BOTH - skip for cycle detection
+            continue
+        
+        # Normalize to always have the "before" activity as the key
+        # This avoids processing the same constraint twice
+        constraint_key = (before, after)
+        if constraint_key not in normalized_deps:
+            normalized_deps[constraint_key] = dep
+    
+    # Now process the normalized dependencies
+    for (before, after), dep in normalized_deps.items():
         if after == cur_activity:
             if before in visited:
                 raise RecursionError(f"Temporal contradiction: cycle detected between '{before}' and '{cur_activity}'")
@@ -143,17 +171,29 @@ def has_temporal_contradiction(
     after = set()
     before = set()
     for source, target in temporal_deps:
-        if temporal_deps.get((source, target)).type != TemporalType.DIRECT:
+        dep = temporal_deps.get((source, target))
+        if dep.type != TemporalType.DIRECT:
             continue
-        if target == activity:
-            before.add(source)
-        if source == activity:
-            after.add(target)
+        
+        # Determine actual order based on direction
+        if dep.direction == Direction.FORWARD:
+            # source comes before target
+            actual_before, actual_after = source, target
+        elif dep.direction == Direction.BACKWARD:
+            # target comes before source (source comes after target)
+            actual_before, actual_after = target, source
+        else:  # Direction.BOTH - skip for contradiction checking
+            continue
+            
+        if actual_after == activity:
+            before.add(actual_before)
+        if actual_before == activity:
+            after.add(actual_after)
 
     for variant in variants:
         variant_activities = set(variant)
         variant_activities.add(activity)
-        if satisfies_existential_constraints(variant_activities, activities, existential_deps):
+        if not satisfies_existential_constraints(variant_activities, activities, existential_deps):
             continue
 
         n = 0
@@ -314,7 +354,7 @@ def insert_into_variants(
     try:
         is_valid_input(activities, new_activities, activity, variants, total_dependencies)
     except ValueError as e:
-        raise ValueError({e}) from e
+        raise ValueError(str(e)) from e
 
     temporal_deps, existential_deps = split_dependencies(dependencies)
 

@@ -5,6 +5,7 @@ from dependencies import (
     ExistentialDependency,
     TemporalType,
     ExistentialType,
+    Direction,
 )
 from change_operations.insert_operation import (
     insert_activity,
@@ -17,90 +18,90 @@ def test_insert_activity_direct_temp():
     matrix = AdjacencyMatrix(activities=["A", "B"])
     matrix.add_dependency(
         "A", "B",
-        TemporalDependency(TemporalType.DIRECT),
-        ExistentialDependency(ExistentialType.EQUIVALENCE)
+        TemporalDependency(TemporalType.DIRECT, Direction.FORWARD),
+        ExistentialDependency(ExistentialType.EQUIVALENCE, Direction.BOTH)
     )
 
     expected_result_matrix = AdjacencyMatrix(activities=["A", "B", "C"])
     expected_result_matrix.add_dependency(
         "A", "B",
-        TemporalDependency(TemporalType.EVENTUAL),
-        ExistentialDependency(ExistentialType.EQUIVALENCE)
+        TemporalDependency(TemporalType.EVENTUAL, Direction.FORWARD),
+        ExistentialDependency(ExistentialType.EQUIVALENCE, Direction.BOTH)
     )
     expected_result_matrix.add_dependency(
         "A", "C",
-        TemporalDependency(TemporalType.DIRECT),
-        ExistentialDependency(ExistentialType.EQUIVALENCE)
+        TemporalDependency(TemporalType.DIRECT, Direction.FORWARD),
+        ExistentialDependency(ExistentialType.EQUIVALENCE, Direction.BOTH)
     )
     expected_result_matrix.add_dependency(
         "C", "B",
-        TemporalDependency(TemporalType.DIRECT),
-        ExistentialDependency(ExistentialType.EQUIVALENCE)
+        TemporalDependency(TemporalType.DIRECT, Direction.FORWARD),
+        ExistentialDependency(ExistentialType.EQUIVALENCE, Direction.BOTH)
     )
     expected_result_matrix.add_dependency(
         "B", "A",
-        None,
-        ExistentialDependency(ExistentialType.EQUIVALENCE)
+        TemporalDependency(TemporalType.EVENTUAL, Direction.BACKWARD),
+        ExistentialDependency(ExistentialType.EQUIVALENCE, Direction.BOTH)
     )
     expected_result_matrix.add_dependency(
         "C", "A",
-        None,
-        ExistentialDependency(ExistentialType.EQUIVALENCE)
+        TemporalDependency(TemporalType.DIRECT, Direction.BACKWARD),
+        ExistentialDependency(ExistentialType.EQUIVALENCE, Direction.BOTH)
     )
     expected_result_matrix.add_dependency(
         "B", "C",
-        None,
-        ExistentialDependency(ExistentialType.EQUIVALENCE)
+        TemporalDependency(TemporalType.DIRECT, Direction.BACKWARD),
+        ExistentialDependency(ExistentialType.EQUIVALENCE, Direction.BOTH)
     )
     
     
     assert insert_activity(matrix, "C", {
-        ("A", "C"): (TemporalDependency(TemporalType.DIRECT), ExistentialDependency(ExistentialType.EQUIVALENCE))}) == expected_result_matrix
+        ("A", "C"): (TemporalDependency(TemporalType.DIRECT, Direction.FORWARD), ExistentialDependency(ExistentialType.EQUIVALENCE, Direction.BOTH))}) == expected_result_matrix
 
 
 def test_insert_activity_end():
     matrix = AdjacencyMatrix(activities=["A", "B"])
     matrix.add_dependency(
         "A", "B",
-        TemporalDependency(TemporalType.DIRECT),
-        ExistentialDependency(ExistentialType.EQUIVALENCE)
+        TemporalDependency(TemporalType.DIRECT, Direction.FORWARD),
+        ExistentialDependency(ExistentialType.EQUIVALENCE, Direction.BOTH)
     )
 
     expected_result_matrix = AdjacencyMatrix(activities=["A", "B", "C"])
     expected_result_matrix.add_dependency(
         "A", "B",
-        TemporalDependency(TemporalType.DIRECT),
-        ExistentialDependency(ExistentialType.EQUIVALENCE)
+        TemporalDependency(TemporalType.DIRECT, Direction.FORWARD),
+        ExistentialDependency(ExistentialType.EQUIVALENCE, Direction.BOTH)
     )
     expected_result_matrix.add_dependency(
         "A", "C",
-        TemporalDependency(TemporalType.EVENTUAL),
-        ExistentialDependency(ExistentialType.EQUIVALENCE)
+        TemporalDependency(TemporalType.EVENTUAL, Direction.FORWARD),
+        ExistentialDependency(ExistentialType.EQUIVALENCE, Direction.BOTH)
     )
     expected_result_matrix.add_dependency(
         "B", "C",
-        TemporalDependency(TemporalType.DIRECT),
-        ExistentialDependency(ExistentialType.EQUIVALENCE)
+        TemporalDependency(TemporalType.DIRECT, Direction.FORWARD),
+        ExistentialDependency(ExistentialType.EQUIVALENCE, Direction.BOTH)
     )
     expected_result_matrix.add_dependency(
         "B", "A",
-        None,
-        ExistentialDependency(ExistentialType.EQUIVALENCE)
+        TemporalDependency(TemporalType.DIRECT, Direction.BACKWARD),
+        ExistentialDependency(ExistentialType.EQUIVALENCE, Direction.BOTH)
     )
     expected_result_matrix.add_dependency(
         "C", "A",
-        None,
-        ExistentialDependency(ExistentialType.EQUIVALENCE)
+        TemporalDependency(TemporalType.EVENTUAL, Direction.BACKWARD),
+        ExistentialDependency(ExistentialType.EQUIVALENCE, Direction.BOTH)
     )
     expected_result_matrix.add_dependency(
         "C", "B",
-        None,
-        ExistentialDependency(ExistentialType.EQUIVALENCE)
+        TemporalDependency(TemporalType.DIRECT, Direction.BACKWARD),
+        ExistentialDependency(ExistentialType.EQUIVALENCE, Direction.BOTH)
     )
     
     
     assert insert_activity(matrix, "C", {
-        ("B", "C"): (TemporalDependency(TemporalType.EVENTUAL), ExistentialDependency(ExistentialType.EQUIVALENCE))}) == expected_result_matrix
+        ("B", "C"): (TemporalDependency(TemporalType.DIRECT, Direction.FORWARD), ExistentialDependency(ExistentialType.EQUIVALENCE, Direction.BOTH))}) == expected_result_matrix
 
 
 def test_insert_in_empty_process():
@@ -114,24 +115,24 @@ def test_insert_in_empty_process():
 
 def test_has_existential_contradiction():
     deps = {
-        ('A', 'B'): ExistentialDependency(ExistentialType.NEGATED_EQUIVALENCE),
-        ('B', 'C'): ExistentialDependency(ExistentialType.EQUIVALENCE),
-        ('C', 'A'): ExistentialDependency(ExistentialType.EQUIVALENCE),
+        ('A', 'B'): (None, ExistentialDependency(ExistentialType.NEGATED_EQUIVALENCE, Direction.BOTH)),
+        ('B', 'C'): (None, ExistentialDependency(ExistentialType.EQUIVALENCE, Direction.BOTH)),
+        ('C', 'A'): (None, ExistentialDependency(ExistentialType.EQUIVALENCE, Direction.BOTH)),
     }
-    assert has_existential_contradiction(deps) == True
+    assert has_existential_contradiction(deps) is True
     deps = {
-        ('A', 'B'): ExistentialDependency(ExistentialType.EQUIVALENCE),
-        ('B', 'C'): ExistentialDependency(ExistentialType.EQUIVALENCE),
-        ('C', 'A'): ExistentialDependency(ExistentialType.EQUIVALENCE),
+        ('A', 'B'): (None, ExistentialDependency(ExistentialType.EQUIVALENCE, Direction.BOTH)),
+        ('B', 'C'): (None, ExistentialDependency(ExistentialType.EQUIVALENCE, Direction.BOTH)),
+        ('C', 'A'): (None, ExistentialDependency(ExistentialType.EQUIVALENCE, Direction.BOTH)),
     }
-    assert has_existential_contradiction(deps) == False
+    assert has_existential_contradiction(deps) is False
 
 def test_has_temporal_contradiction():
     temporal_deps = {
-        ('A', 'B'): TemporalDependency(TemporalType.DIRECT),
-        ('B', 'C'): TemporalDependency(TemporalType.DIRECT),
-        ('C', 'A'): TemporalDependency(TemporalType.DIRECT),
+        ('A', 'B'): TemporalDependency(TemporalType.DIRECT, Direction.FORWARD),
+        ('B', 'C'): TemporalDependency(TemporalType.DIRECT, Direction.FORWARD),
+        ('C', 'A'): TemporalDependency(TemporalType.DIRECT, Direction.FORWARD),
     }
     existential_deps = {}
     activities = ["A", "B", "C"]
-    assert has_temporal_contradiction(temporal_deps, existential_deps, activities, "B", ["A", "B", "C"]) == True
+    assert has_temporal_contradiction(temporal_deps, existential_deps, activities, "B", ["A", "B", "C"]) is True

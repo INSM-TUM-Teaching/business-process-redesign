@@ -40,7 +40,7 @@ def move_activity(
     try:
         new_variants = move_activity_in_variants(activity, dependencies, variants, activities, total_dependencies)
     except ValueError as e:
-        raise ValueError({e}) from e
+        raise ValueError(f"The input is invalid: {str(e)}") from e
     return  traces_to_adjacency_matrix(new_variants)
 
 def move_activity_in_variants(
