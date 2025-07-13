@@ -1,20 +1,20 @@
-from typing import List, Set
+from typing import List, Set, Tuple, Dict, Optional
 from itertools import permutations
-from acceptance_variants import generate_acceptance_variants, build_permutations
+from acceptance_variants import generate_acceptance_variants
 from adjacency_matrix import AdjacencyMatrix
-from dependencies import TemporalType
+from dependencies import TemporalType, TemporalDependency, ExistentialDependency
 from traces_to_matrix import traces_to_adjacency_matrix
 
 def get_unique_elements_between_parallel_activities(variants: List[List[str]], parallel_activities: Set[str]) -> List[str]:
     """
-    Extracts all unique elements that occur between any two collapse activities across multiple variants.
+    Extracts all unique elements that occur between any two parallelized activities across multiple variants.
     
     Args:
         variants: A list of variants, each being a list of activity names.
-        collapse_activities: A set of activity names considered for collapsing.
+        parallelize_activities: A set of activity names considered for parallelizing.
         
     Returns:
-        A list of unique activity names that are strictly between two consecutive collapse activities.
+        A list of unique activity names that are strictly between two consecutive parallelize activities.
     """
     elements_in_between = []
 
@@ -33,7 +33,13 @@ def get_unique_elements_between_parallel_activities(variants: List[List[str]], p
     
     return elements_in_between
 
-def check_valid_input(matrix: AdjacencyMatrix, variants: List[List[str]], parallel_activities: List[str]):
+def check_valid_input(
+        dependencies: Dict[
+            Tuple[str, str],
+            Tuple[Optional[TemporalDependency], Optional[ExistentialDependency]],
+        ], 
+        variants: List[List[str]], parallel_activities: List[str]
+    ) -> bool:
     """
     Define set X = {x1, x2, …, xn} to be parallelized
     Create all variants 
@@ -43,35 +49,53 @@ def check_valid_input(matrix: AdjacencyMatrix, variants: List[List[str]], parall
         If this is case: parallelize  
         Else: reject 
     """
-    # Check for existing activities y, which are in variants between elements of collapse_activities 
+    # Check for existing activities y, which are in variants between elements of parallelize_activities 
     activities_in_between = get_unique_elements_between_parallel_activities(variants, parallel_activities)
 
     if not activities_in_between:
-        # if activities in between are empty, we can directly collapse 
+        # if activities in between are empty, we can directly paralellize
         return True
     
     else: 
         for activity in activities_in_between:
-            for collapse_activity in parallel_activities:
-                # ensure that the y which happens in between is temporally independnet to all of the elements of the activities to be collapsed 
-                temporal_dep, existential_dep = matrix.get_dependency(activity, collapse_activity)
+            for parallel_activity in parallel_activities:
+                # ensure that the y which happens in between is temporally independent to all of the elements of the activities to be parallelized
+                temporal_dep, _ = dependencies.get(activity, parallel_activity)
                 # check for dependency type 
                 if temporal_dep.type != TemporalType.INDEPENDENCE:
-                    # then collapsing not possible, problem is that we have activities happening in between 
+                    # then parallelizing not possible, problem is that we have activities happening in between
                     return False
     return True
 
-def parallelize_activities(matrix: AdjacencyMatrix, parallel_activities: Set[str]):
+def parallelize_activities_on_variants(
+        parallel_activities: Set[str], 
+        dependencies: Dict[
+            Tuple[str, str],
+            Tuple[Optional[TemporalDependency], Optional[ExistentialDependency]],
+        ], 
+        variants: List[List[str]]) -> List[List[str]]:
     """
-    Parallelize activities
-    """
-    variants = generate_acceptance_variants(matrix)
+    Parallelizes activities by:
+    1. Checking if input is valid
+    2. Creating permutations of parallel_activities
+    3. Past all permutations in variants for first activity in parallel_activites to be found and delete all other activites in parallel activities from variant
 
-    if not check_valid_input(matrix, variants, parallel_activities):
+    Args:
+        parallell_activities: The name of the activities to be paralellized
+        dependencies: Depenedencies between the activities.
+        variants: The variants in which the activites should be parallelized
+
+    Returns:
+       The new variants with the activities parallelized
+
+    Raises:
+        ValueError: If input produces contradiction
+    """
+
+    if not check_valid_input(dependencies, variants, parallel_activities):
         raise ValueError("Invalid input")
     
     perms = [list(p) for p in permutations(parallel_activities, len(parallel_activities))]
-    print(perms)
     new_variants = []
 
     for variant in variants:
@@ -86,7 +110,33 @@ def parallelize_activities(matrix: AdjacencyMatrix, parallel_activities: Set[str
                 new_variant.insert(pos, activity)
             new_variants.append(new_variant.copy())
 
-    print(new_variants)
+    return new_variants
+
+
+
+def parallelize_activities(matrix: AdjacencyMatrix, parallel_activities: Set[str]):
+    """
+    Parallelizes activities in matrix:
+    1. Generating variants for the input matrix.
+    2. Parallelize in variants.
+    3. Convert variants to new matrix.
+
+    Args:
+        matrix: The input adjacency matrix
+        parallell_activities: The name of the activities to be paralellized
+
+    Returns:
+        A new adjacency matrix with the activities parallelized
+
+    Raises:
+        ValueError: If input produces contradiction
+    """
+    variants = generate_acceptance_variants(matrix)
+
+    try:
+        new_variants = parallelize_activities_on_variants(parallel_activities, matrix.dependencies, variants)
+    except ValueError as e:
+        raise ValueError({e}) from e
     
     new_matrix = traces_to_adjacency_matrix(new_variants)
     
