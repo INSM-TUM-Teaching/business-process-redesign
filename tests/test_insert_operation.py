@@ -7,11 +7,9 @@ from dependencies import (
     ExistentialType,
     Direction,
 )
-from change_operations.insert_operation import (
-    insert_activity,
-    has_existential_contradiction,
-    has_temporal_contradiction
-    )
+from change_operations.insert_operation import insert_activity
+from utils.check_contradictions import has_existential_contradiction, has_temporal_contradiction
+
 
 
 def test_insert_activity_direct_temp():
