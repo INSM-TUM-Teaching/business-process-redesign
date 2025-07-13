@@ -227,6 +227,83 @@ function updateOperationInputs() {
                     <input type="text" id="activity2" class="form-control">
                 </div>`;
             break;
+        case 'modify':
+            inputsDiv.innerHTML = `
+                <div class="form-group">
+                    <label class="form-label" for="from_activity">From Activity:</label>
+                    <input type="text" id="from_activity" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="to_activity">To Activity:</label>
+                    <input type="text" id="to_activity" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="temporal_dep">Temporal Dependency:</label>
+                    <select id="temporal_dep" class="form-control">
+                        <option value="">--No Change--</option>
+                        <option value="DIRECT">Direct</option>
+                        <option value="EVENTUAL">Eventual</option>
+                        <option value="INDEPENDENCE">Independence</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="temporal_direction">Temporal Direction:</label>
+                    <select id="temporal_direction" class="form-control">
+                        <option value="FORWARD">Forward</option>
+                        <option value="BACKWARD">Backward</option>
+                        <option value="BOTH">Both</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="existential_dep">Existential Dependency:</label>
+                    <select id="existential_dep" class="form-control">
+                        <option value="">--No Change--</option>
+                        <option value="IMPLICATION">Implication</option>
+                        <option value="EQUIVALENCE">Equivalence</option>
+                        <option value="NEGATED_EQUIVALENCE">Negated Equivalence</option>
+                        <option value="NAND">NAND</option>
+                        <option value="OR">OR</option>
+                        <option value="INDEPENDENCE">Independence</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="existential_direction">Existential Direction:</label>
+                    <select id="existential_direction" class="form-control">
+                        <option value="FORWARD">Forward</option>
+                        <option value="BACKWARD">Backward</option>
+                        <option value="BOTH">Both</option>
+                    </select>
+                </div>`;
+            
+            setTimeout(() => {
+                const bothDirectionTypes = ['EQUIVALENCE', 'NEGATED_EQUIVALENCE', 'NAND', 'OR', 'INDEPENDENCE'];
+                
+                const temporalDepSelect = document.getElementById('temporal_dep');
+                const existentialDepSelect = document.getElementById('existential_dep');
+                const temporalDirectionSelect = document.getElementById('temporal_direction');
+                const existentialDirectionSelect = document.getElementById('existential_direction');
+
+                temporalDepSelect.addEventListener('change', (e) => {
+                    if (bothDirectionTypes.includes(e.target.value)) {
+                        temporalDirectionSelect.value = 'BOTH';
+                    } else if (e.target.value !== '') {
+                        temporalDirectionSelect.value = 'FORWARD';
+                    }
+                });
+
+                existentialDepSelect.addEventListener('change', (e) => {
+                    if (bothDirectionTypes.includes(e.target.value)) {
+                        existentialDirectionSelect.value = 'BOTH';
+                    } else if (e.target.value !== '') {
+                        existentialDirectionSelect.value = 'FORWARD';
+                    }
+                });
+                
+                if (bothDirectionTypes.includes(existentialDepSelect.value)) {
+                    existentialDirectionSelect.value = 'BOTH';
+                }
+            }, 0);
+            break;
     }
 }
 
@@ -257,6 +334,24 @@ function performChangeOperation() {
         case 'swap':
             formData.append('activity1', document.getElementById('activity1').value);
             formData.append('activity2', document.getElementById('activity2').value);
+            break;
+        case 'modify':
+            formData.append('from_activity', document.getElementById('from_activity').value);
+            formData.append('to_activity', document.getElementById('to_activity').value);
+            
+            const temporalDep = document.getElementById('temporal_dep').value;
+            const existentialDep = document.getElementById('existential_dep').value;
+            const temporalDirection = document.getElementById('temporal_direction').value;
+            const existentialDirection = document.getElementById('existential_direction').value;
+            
+            if (temporalDep) {
+                formData.append('temporal_dep', temporalDep);
+                formData.append('temporal_direction', temporalDirection);
+            }
+            if (existentialDep) {
+                formData.append('existential_dep', existentialDep);
+                formData.append('existential_direction', existentialDirection);
+            }
             break;
     }
 

@@ -17,6 +17,7 @@ from change_operations.skip_operation import skip_activity
 from change_operations.replace_operation import replace_activity
 from change_operations.collapse_operation import collapse_operation
 from change_operations.de_collapse_operation import decollapse_operation
+from change_operations.modify_operation import modify_dependency
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'temp_uploads'
@@ -317,6 +318,34 @@ def change_matrix():
                 modified_matrix = decollapse_operation(current_matrix, collapsed_activity, collapsed_matrix)
             else:
                 return jsonify({"success": False, "error": "Invalid file type for collapsed matrix."})
+        elif operation == 'modify':
+            from_activity = request.form.get('from_activity')
+            to_activity = request.form.get('to_activity')
+            temporal_dep_str = request.form.get('temporal_dep')
+            existential_dep_str = request.form.get('existential_dep')
+            temporal_direction_str = request.form.get('temporal_direction')
+            existential_direction_str = request.form.get('existential_direction')
+            
+            # Convert string parameters to enum types
+            temporal_dep = None
+            if temporal_dep_str:
+                temporal_dep = TemporalType[temporal_dep_str]
+            
+            existential_dep = None
+            if existential_dep_str:
+                existential_dep = ExistentialType[existential_dep_str]
+            
+            temporal_direction = None
+            if temporal_direction_str:
+                temporal_direction = Direction[temporal_direction_str]
+            
+            existential_direction = None
+            if existential_direction_str:
+                existential_direction = Direction[existential_direction_str]
+            
+            modified_matrix = modify_dependency(current_matrix, from_activity, to_activity, 
+                                              temporal_dep, existential_dep, 
+                                              temporal_direction, existential_direction)
 
         if modified_matrix:
             # Store the modified matrix for export

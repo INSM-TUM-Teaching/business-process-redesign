@@ -9,6 +9,7 @@ from dependencies import (
     ExistentialDependency,
     TemporalType,
     ExistentialType,
+    Direction,
 )
 
 def modify_dependency(
@@ -17,6 +18,8 @@ def modify_dependency(
         to_activity: str,
         temporal_dep: Optional[TemporalType],
         existential_dep: Optional[ExistentialType],
+        temporal_direction: Optional[Direction] = None,
+        existential_direction: Optional[Direction] = None,
     ) -> AdjacencyMatrix: 
     """
     Modify a dependency with activities which are part of the process: 
@@ -59,9 +62,11 @@ def modify_dependency(
         if (from_act == from_activity and to_act == to_activity) or \
            (from_act == to_activity and to_act == from_activity):
             if existential_dep: 
-                existential_dependency = ExistentialDependency(existential_dep, direction=existential_dependency.direction)
+                direction = existential_direction if existential_direction is not None else existential_dependency.direction
+                existential_dependency = ExistentialDependency(existential_dep, direction=direction)
             if temporal_dep:
-                temporal_dependency = TemporalDependency(temporal_dep, direction=temporal_dependency.direction)
+                direction = temporal_direction if temporal_direction is not None else temporal_dependency.direction
+                temporal_dependency = TemporalDependency(temporal_dep, direction=direction)
 
         new_matrix.add_dependency(from_act, to_act, temporal_dependency, existential_dependency)
 
