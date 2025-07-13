@@ -1,3 +1,7 @@
+// Global variables to store matrix data
+let originalMatrixData = null;
+let modifiedMatrixData = null;
+
 function processInput() {
     const tracesInput = document.getElementById('traces-input').value;
     const yamlFile = document.getElementById('yaml-file').files[0];
@@ -53,9 +57,20 @@ function fetchAndDisplayMatrix() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
+                originalMatrixData = data;
+                modifiedMatrixData = null; // Clear any previous modified matrix
+                
                 displayMatrix(data, 'matrix-display');
                 displayMatrix(data, 'original-matrix-display');
                 document.getElementById('modified-matrix-display').innerHTML = '<div class="alert alert-info">The result of the operation will be displayed here.</div>';
+                
+                // Reset matrix source selection to "original" and disable "modified" option
+                const matrixSourceSelect = document.getElementById('matrix-source-select');
+                matrixSourceSelect.value = 'original';
+                const modifiedOption = document.querySelector('#matrix-source-select option[value="modified"]');
+                modifiedOption.disabled = true;
+                modifiedOption.textContent = 'Modified Matrix';
+                updateMatrixSourceTitle();
             } else {
                 document.getElementById('matrix-display').innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
             }
@@ -309,8 +324,10 @@ function updateOperationInputs() {
 
 function performChangeOperation() {
     const operation = document.getElementById('change-operation-select').value;
+    const matrixSource = document.getElementById('matrix-source-select').value;
     const formData = new FormData();
     formData.append('operation', operation);
+    formData.append('matrix_source', matrixSource);
 
     switch (operation) {
         case 'delete':
@@ -370,9 +387,21 @@ function performChangeOperation() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
+            modifiedMatrixData = data.modified;
+            
             displayMatrix(data.original, 'original-matrix-display');
             displayMatrix(data.modified, 'modified-matrix-display');
             console.log('Diff Info:', data.diff_info);
+            
+            const modifiedOption = document.querySelector('#matrix-source-select option[value="modified"]');
+            modifiedOption.disabled = false;
+            modifiedOption.textContent = 'Modified Matrix (Available)';
+            
+            // Update the source matrix display if "modified" is currently selected
+            const matrixSource = document.getElementById('matrix-source-select').value;
+            if (matrixSource === 'modified') {
+                updateSourceMatrixDisplay('modified');
+            }
             
             document.getElementById('export-button').style.display = 'inline-block';
         } else {
@@ -416,9 +445,91 @@ function exportModifiedMatrix() {
         });
 }
 
+function updateMatrixSourceTitle() {
+    const matrixSource = document.getElementById('matrix-source-select').value;
+    const titleElement = document.getElementById('source-matrix-title');
+    const modifiedOption = document.querySelector('#matrix-source-select option[value="modified"]');
+    
+    if (matrixSource === 'modified') {
+        titleElement.textContent = 'Modified Matrix (Source)';
+        if (modifiedOption.disabled) {
+            // If modified option is disabled, reset to original
+            document.getElementById('matrix-source-select').value = 'original';
+            titleElement.textContent = 'Initial Matrix (Source)';
+            showMatrixSourceStatus('original');
+            updateSourceMatrixDisplay('original');
+        } else {
+            showMatrixSourceStatus('modified');
+            updateSourceMatrixDisplay('modified');
+        }
+    } else {
+        titleElement.textContent = 'Initial Matrix (Source)';
+        showMatrixSourceStatus('original');
+        updateSourceMatrixDisplay('original');
+    }
+}
+
+function updateSourceMatrixDisplay(matrixSource) {
+    const sourceDisplay = document.getElementById('original-matrix-display');
+    
+    if (matrixSource === 'modified' && modifiedMatrixData) {
+        displayMatrix(modifiedMatrixData, 'original-matrix-display');
+    } else if (matrixSource === 'original' && originalMatrixData) {
+        displayMatrix(originalMatrixData, 'original-matrix-display');
+    } else {
+        sourceDisplay.innerHTML = '<div class="alert alert-info">Generate a matrix first to perform operations on it.</div>';
+    }
+}
+
+function showMatrixSourceStatus(matrixSource) {
+    const statusMessages = {
+        'original': 'Using Initial Matrix as source for operation',
+        'modified': 'Using Modified Matrix as source for operation'
+    };
+    
+    let statusElement = document.getElementById('matrix-source-status');
+    if (!statusElement) {
+        statusElement = document.createElement('div');
+        statusElement.id = 'matrix-source-status';
+        statusElement.className = 'alert alert-info';
+        statusElement.style.marginTop = '10px';
+        statusElement.style.fontSize = '0.9em';
+        
+        const operationInputs = document.getElementById('operation-inputs');
+        if (operationInputs.nextSibling) {
+            operationInputs.parentNode.insertBefore(statusElement, operationInputs.nextSibling);
+        } else {
+            operationInputs.parentNode.appendChild(statusElement);
+        }
+    }
+    
+    statusElement.textContent = statusMessages[matrixSource] || '';
+    statusElement.style.display = matrixSource ? 'block' : 'none';
+}
+
+function updateSourceMatrixDisplay(matrixSource) {
+    const originalMatrixDisplay = document.getElementById('original-matrix-display');
+    const modifiedMatrixDisplay = document.getElementById('modified-matrix-display');
+    
+    if (matrixSource === 'original' && originalMatrixData) {
+        displayMatrix(originalMatrixData, 'original-matrix-display');
+    } else if (matrixSource === 'modified' && modifiedMatrixData) {
+        displayMatrix(modifiedMatrixData, 'modified-matrix-display');
+    }
+}
 
 // Initialize page
 document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('change-operation-select').addEventListener('change', updateOperationInputs);
+    document.getElementById('matrix-source-select').addEventListener('change', () => {
+        updateMatrixSourceTitle();
+        showMatrixSourceStatus(document.getElementById('matrix-source-select').value);
+    });
+    
+    // Initialize the "Modified Matrix" option as disabled
+    const modifiedOption = document.querySelector('#matrix-source-select option[value="modified"]');
+    modifiedOption.disabled = true;
+    updateMatrixSourceTitle();
+    
     console.log('Business Process Redesign Tool initialized');
 });

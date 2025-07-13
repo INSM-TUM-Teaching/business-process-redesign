@@ -49,6 +49,13 @@
             <div class="card">
                 <h3 class="card-title">Operation Configuration</h3>
                 <div class="form-group">
+                    <label class="form-label" for="matrix-source-select">Apply Operation To:</label>
+                    <select id="matrix-source-select" class="form-control">
+                        <option value="original">Initial Matrix</option>
+                        <option value="modified">Modified Matrix</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label class="form-label" for="change-operation-select">Select Change Operation:</label>
                     <select id="change-operation-select" class="form-control">
                         <option value="">--Please choose an operation--</option>
@@ -67,7 +74,7 @@
                 </div>
             </div>
             <div class="card">
-                <h3 class="card-title">Original Matrix</h3>
+                <h3 class="card-title" id="source-matrix-title">Source Matrix</h3>
                 <div class="matrix-display" id="original-matrix-display">
                     <div class="alert alert-info">
                         Generate a matrix first to perform operations on it.

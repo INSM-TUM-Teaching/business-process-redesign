@@ -276,7 +276,18 @@ def change_matrix():
     if original_matrix is None:
         return jsonify({"success": False, "error": "Matrix not generated yet."})
 
-    current_matrix = copy.deepcopy(original_matrix)
+    # Determine which matrix to use as the source for the operation
+    matrix_source = request.form.get('matrix_source', 'original')  # Default to original
+    
+    if matrix_source == 'modified':
+        if last_modified_matrix is not None:
+            current_matrix = copy.deepcopy(last_modified_matrix)
+            source_matrix_for_diff = last_modified_matrix
+        else:
+            return jsonify({"success": False, "error": "No modified matrix available. Please perform an operation first or select 'Initial Matrix'."})
+    else:
+        current_matrix = copy.deepcopy(original_matrix)
+        source_matrix_for_diff = original_matrix
 
     try:
         operation = request.form.get('operation')
@@ -410,8 +421,8 @@ def change_matrix():
                     else:
                         matrix_display[from_activity][to_activity] = ""
             
-            diff_info = calculate_matrix_diff(original_matrix, modified_matrix)
-            formatted_original = format_matrix_display(original_matrix, diff_info, is_original=True)
+            diff_info = calculate_matrix_diff(source_matrix_for_diff, modified_matrix)
+            formatted_source = format_matrix_display(source_matrix_for_diff, diff_info, is_original=True)
             formatted_modified = format_matrix_display(modified_matrix, diff_info, is_original=False)
             
             last_modified_matrix = modified_matrix
@@ -419,9 +430,9 @@ def change_matrix():
             return jsonify({
                 "success": True,
                 "original": {
-                    "activities": formatted_original["activities"],
-                    "matrix": formatted_original["matrix"],
-                    "cell_classes": formatted_original["cell_classes"]
+                    "activities": formatted_source["activities"],
+                    "matrix": formatted_source["matrix"],
+                    "cell_classes": formatted_source["cell_classes"]
                 },
                 "modified": {
                     "activities": formatted_modified["activities"],
