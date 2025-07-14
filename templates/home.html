@@ -37,6 +37,23 @@
                         Provide traces or upload a file to generate the matrix.
                     </div>
                 </div>
+                <div id="lock-dependencies" class="form-group" style="margin-top: 20px;">
+                    <h4>Lock Dependencies</h4>
+                    <div class="form-row">
+                        <select id="lock-from-activity" class="form-control" style="display: inline-block; width: 45%; margin-right: 5%;">
+                            <option value="">From Activity</option>
+                        </select>
+                        <select id="lock-to-activity" class="form-control" style="display: inline-block; width: 45%;">
+                            <option value="">To Activity</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-top: 10px;">
+                        <label><input type="checkbox" id="lock-temporal"> Lock Temporal</label>
+                        <label style="margin-left: 20px;"><input type="checkbox" id="lock-existential"> Lock Existential</label>
+                    </div>
+                    <button type="button" class="btn btn-secondary" onclick="addLock()">Add Lock</button>
+                    <ul id="locks-list" style="margin-top: 10px; list-style: none; padding: 0;"></ul>
+                </div>
             </div>
         </div>
     </div>

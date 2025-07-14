@@ -2,6 +2,8 @@
 let originalMatrixData = null;
 let modifiedMatrixData = null;
 
+let lockedDependencies = [];
+
 function processInput() {
     const tracesInput = document.getElementById('traces-input').value;
     const yamlFile = document.getElementById('yaml-file').files[0];
@@ -71,6 +73,7 @@ function fetchAndDisplayMatrix() {
                 modifiedOption.disabled = true;
                 modifiedOption.textContent = 'Modified Matrix';
                 updateMatrixSourceTitle();
+                populateLockSelections(data.activities);
             } else {
                 document.getElementById('matrix-display').innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
             }
@@ -433,12 +436,79 @@ function removeDependency(button) {
     dependencyDiv.remove();
 }
 
+function populateLockSelections(activities) {
+    // Reset locks when new matrix is fetched
+    lockedDependencies = [];
+    const fromSelect = document.getElementById('lock-from-activity');
+    const toSelect = document.getElementById('lock-to-activity');
+    fromSelect.innerHTML = '<option value="">From Activity</option>';
+    toSelect.innerHTML = '<option value="">To Activity</option>';
+    activities.forEach(act => {
+        const opt1 = document.createElement('option'); opt1.value = act; opt1.textContent = act;
+        const opt2 = document.createElement('option'); opt2.value = act; opt2.textContent = act;
+        fromSelect.appendChild(opt1);
+        toSelect.appendChild(opt2);
+    });
+    // Clear existing locks list UI
+    renderLocksList();
+}
+
+function addLock() {
+    const from = document.getElementById('lock-from-activity').value;
+    const to = document.getElementById('lock-to-activity').value;
+    const temporal = document.getElementById('lock-temporal').checked;
+    const existential = document.getElementById('lock-existential').checked;
+    if (!from || !to) {
+        alert('Please select both From and To activities for locking.'); return;
+    }
+    if (!temporal && !existential) {
+        alert('Please select at least one lock type (Temporal or Existential).'); return;
+    }
+    lockedDependencies.push({from, to, temporal, existential});
+    renderLocksList();
+}
+
+function removeLock(index) {
+    lockedDependencies.splice(index, 1);
+    renderLocksList();
+}
+
+function renderLocksList() {
+    const list = document.getElementById('locks-list');
+    list.innerHTML = '';
+    list.className = 'list-group';
+    if (lockedDependencies.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'text-muted';
+        empty.textContent = 'No locks added.';
+        list.appendChild(empty);
+        return;
+    }
+    lockedDependencies.forEach((lock, idx) => {
+        const li = document.createElement('li');
+        li.className = 'list-group-item d-flex justify-content-between align-items-center';
+        const info = document.createElement('div');
+        info.innerHTML = `<strong>${lock.from}</strong> → <strong>${lock.to}</strong>
+            ${lock.temporal ? '<span class="badge badge-primary badge-pill ml-2">Temporal</span>' : ''}
+            ${lock.existential ? '<span class="badge badge-secondary badge-pill ml-2">Existential</span>' : ''}`;
+        const btn = document.createElement('button');
+        btn.textContent = 'Remove';
+        btn.className = 'btn btn-sm btn-outline-danger';
+        btn.onclick = () => removeLock(idx);
+        li.appendChild(info);
+        li.appendChild(btn);
+        list.appendChild(li);
+    });
+}
+
 function performChangeOperation() {
     const operation = document.getElementById('change-operation-select').value;
     const matrixSource = document.getElementById('matrix-source-select').value;
     const formData = new FormData();
     formData.append('operation', operation);
     formData.append('matrix_source', matrixSource);
+    // Append locks
+    formData.append('locks', JSON.stringify(lockedDependencies));
 
     switch (operation) {
         case 'delete':

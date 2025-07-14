@@ -9,6 +9,7 @@ from adjacency_matrix import AdjacencyMatrix, parse_yaml_to_adjacency_matrix
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from flask import Flask, render_template, request, jsonify
+import json
 from traces_to_matrix import traces_to_adjacency_matrix
 from dependencies import TemporalType, ExistentialType, Direction, TemporalDependency, ExistentialDependency
 from change_operations.delete_operation import delete_activity
@@ -389,6 +390,27 @@ def change_matrix():
                                               temporal_direction, existential_direction)
 
         if modified_matrix:
+            locks = []
+            try:
+                locks = json.loads(request.form.get('locks', '[]'))
+            except Exception:
+                pass
+            for lock in locks:
+                frm = lock.get('from')
+                to = lock.get('to')
+                temporal_lock = lock.get('temporal')
+                existential_lock = lock.get('existential')
+                # Get original dep from source matrix
+                orig_dep = source_matrix_for_diff.get_dependency(frm, to)
+                new_dep = modified_matrix.get_dependency(frm, to)
+                orig_temporal, orig_existential = orig_dep if orig_dep else (None, None)
+                new_temporal, new_existential = new_dep if new_dep else (None, None)
+                if temporal_lock:
+                    if (orig_temporal and new_temporal and (orig_temporal.type != new_temporal.type or orig_temporal.direction != new_temporal.direction)) or (bool(orig_temporal) != bool(new_temporal)):
+                        return jsonify({"success": False, "error": f"Temporal dependency from '{frm}' to '{to}' is locked and cannot be changed."})
+                if existential_lock:
+                    if (orig_existential and new_existential and (orig_existential.type != new_existential.type or orig_existential.direction != new_existential.direction)) or (bool(orig_existential) != bool(new_existential)):
+                        return jsonify({"success": False, "error": f"Existential dependency from '{frm}' to '{to}' is locked and cannot be changed."})
             # Store the modified matrix for export
             last_modified_matrix = modified_matrix
             
