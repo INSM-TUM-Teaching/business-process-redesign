@@ -24,7 +24,7 @@ def search_valid_positions_to_insert(
     Args:
         variant: variant in which activity shall be inserted
         activity: The name of the activity to insert.
-        temporal_dependeps: The temporal dependencies defining the position of the activity to be inserted.
+        temporal_dependencies: The temporal dependencies defining the position of the activity to be inserted.
 
     Returns:
         List of new variants according to temporal dependencies

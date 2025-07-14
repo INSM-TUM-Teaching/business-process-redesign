@@ -12,6 +12,7 @@ from flask import Flask, render_template, request, jsonify
 from traces_to_matrix import traces_to_adjacency_matrix
 from dependencies import TemporalType, ExistentialType, Direction, TemporalDependency, ExistentialDependency
 from change_operations.delete_operation import delete_activity
+from change_operations.insert_operation import insert_activity
 from change_operations.swap_operation import swap_activities
 from change_operations.skip_operation import skip_activity
 from change_operations.replace_operation import replace_activity
@@ -296,6 +297,35 @@ def change_matrix():
         if operation == 'delete':
             activity = request.form.get('activity')
             modified_matrix = delete_activity(current_matrix, activity)
+        elif operation == 'insert':
+            activity = request.form.get('activity')
+            
+            dependencies = {}
+            dependency_count = int(request.form.get('dependency_count', 0))
+            
+            for i in range(dependency_count):
+                from_activity = request.form.get(f'from_activity_{i}')
+                to_activity = request.form.get(f'to_activity_{i}')
+                temporal_dep_str = request.form.get(f'temporal_dep_{i}')
+                existential_dep_str = request.form.get(f'existential_dep_{i}')
+                temporal_direction_str = request.form.get(f'temporal_direction_{i}')
+                existential_direction_str = request.form.get(f'existential_direction_{i}')
+                
+                if from_activity and to_activity:
+                    temporal_dep = None
+                    existential_dep = None
+                    
+                    if temporal_dep_str:
+                        temporal_direction = Direction[temporal_direction_str] if temporal_direction_str else Direction.FORWARD
+                        temporal_dep = TemporalDependency(TemporalType[temporal_dep_str], temporal_direction)
+                    
+                    if existential_dep_str:
+                        existential_direction = Direction[existential_direction_str] if existential_direction_str else Direction.FORWARD
+                        existential_dep = ExistentialDependency(ExistentialType[existential_dep_str], existential_direction)
+                    
+                    dependencies[(from_activity, to_activity)] = (temporal_dep, existential_dep)
+            
+            modified_matrix = insert_activity(current_matrix, activity, dependencies)
         elif operation == 'swap':
             activity1 = request.form.get('activity1')
             activity2 = request.form.get('activity2')

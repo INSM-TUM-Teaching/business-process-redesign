@@ -191,6 +191,20 @@ function updateOperationInputs() {
                     <input type="text" id="activity" class="form-control">
                 </div>`;
             break;
+        case 'insert':
+            inputsDiv.innerHTML = `
+                <div class="form-group">
+                    <label class="form-label" for="activity">Activity to Insert:</label>
+                    <input type="text" id="activity" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Dependencies for the new activity:</label>
+                    <div id="dependencies-container">
+                        <!-- Dependencies will be added here -->
+                    </div>
+                    <button type="button" class="btn btn-secondary" onclick="addDependency()">Add Dependency</button>
+                </div>`;
+            break;
         case 'collapse':
             inputsDiv.innerHTML = `
                 <div class="form-group">
@@ -322,6 +336,103 @@ function updateOperationInputs() {
     }
 }
 
+let dependencyCounter = 0;
+
+function addDependency() {
+    const container = document.getElementById('dependencies-container');
+    const dependencyId = dependencyCounter++;
+    
+    const dependencyDiv = document.createElement('div');
+    dependencyDiv.className = 'dependency-item';
+    dependencyDiv.style.border = '1px solid #ddd';
+    dependencyDiv.style.padding = '10px';
+    dependencyDiv.style.margin = '5px 0';
+    dependencyDiv.style.borderRadius = '4px';
+    
+    dependencyDiv.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <strong>Dependency ${dependencyId + 1}</strong>
+            <button type="button" class="btn btn-danger btn-sm" onclick="removeDependency(this)">Remove</button>
+        </div>
+        <div class="form-group">
+            <label class="form-label">From Activity:</label>
+            <input type="text" name="from_activity_${dependencyId}" class="form-control" placeholder="Activity name">
+        </div>
+        <div class="form-group">
+            <label class="form-label">To Activity:</label>
+            <input type="text" name="to_activity_${dependencyId}" class="form-control" placeholder="Activity name">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Temporal Dependency:</label>
+            <select name="temporal_dep_${dependencyId}" class="form-control temporal-dependency-select">
+                <option value="">--None--</option>
+                <option value="DIRECT">Direct</option>
+                <option value="EVENTUAL">Eventual</option>
+                <option value="INDEPENDENCE">Independence</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Temporal Direction:</label>
+            <select name="temporal_direction_${dependencyId}" class="form-control temporal-direction-select">
+                <option value="FORWARD">Forward</option>
+                <option value="BACKWARD">Backward</option>
+                <option value="BOTH">Both</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Existential Dependency:</label>
+            <select name="existential_dep_${dependencyId}" class="form-control existential-dependency-select">
+                <option value="">--None--</option>
+                <option value="IMPLICATION">Implication</option>
+                <option value="EQUIVALENCE">Equivalence</option>
+                <option value="NEGATED_EQUIVALENCE">Negated Equivalence</option>
+                <option value="NAND">NAND</option>
+                <option value="OR">OR</option>
+                <option value="INDEPENDENCE">Independence</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Existential Direction:</label>
+            <select name="existential_direction_${dependencyId}" class="form-control existential-direction-select">
+                <option value="FORWARD">Forward</option>
+                <option value="BACKWARD">Backward</option>
+                <option value="BOTH">Both</option>
+            </select>
+        </div>
+    `;
+    
+    container.appendChild(dependencyDiv);
+    
+    // Add event listeners for direction defaults based on dependency types
+    const bothDirectionTypes = ['EQUIVALENCE', 'NEGATED_EQUIVALENCE', 'NAND', 'OR', 'INDEPENDENCE'];
+    
+    const temporalDepSelect = dependencyDiv.querySelector('.temporal-dependency-select');
+    const temporalDirectionSelect = dependencyDiv.querySelector('.temporal-direction-select');
+    const existentialDepSelect = dependencyDiv.querySelector('.existential-dependency-select');
+    const existentialDirectionSelect = dependencyDiv.querySelector('.existential-direction-select');
+    
+    temporalDepSelect.addEventListener('change', (e) => {
+        if (bothDirectionTypes.includes(e.target.value)) {
+            temporalDirectionSelect.value = 'BOTH';
+        } else if (e.target.value !== '') {
+            temporalDirectionSelect.value = 'FORWARD';
+        }
+    });
+
+    existentialDepSelect.addEventListener('change', (e) => {
+        if (bothDirectionTypes.includes(e.target.value)) {
+            existentialDirectionSelect.value = 'BOTH';
+        } else if (e.target.value !== '') {
+            existentialDirectionSelect.value = 'FORWARD';
+        }
+    });
+}
+
+function removeDependency(button) {
+    const dependencyDiv = button.closest('.dependency-item');
+    dependencyDiv.remove();
+}
+
 function performChangeOperation() {
     const operation = document.getElementById('change-operation-select').value;
     const matrixSource = document.getElementById('matrix-source-select').value;
@@ -332,6 +443,29 @@ function performChangeOperation() {
     switch (operation) {
         case 'delete':
             formData.append('activity', document.getElementById('activity').value);
+            break;
+        case 'insert':
+            formData.append('activity', document.getElementById('activity').value);
+            
+            // Count dependencies and add them to form data
+            const dependencyItems = document.querySelectorAll('.dependency-item');
+            formData.append('dependency_count', dependencyItems.length);
+            
+            dependencyItems.forEach((item, index) => {
+                const fromActivity = item.querySelector(`input[name^="from_activity_"]`).value;
+                const toActivity = item.querySelector(`input[name^="to_activity_"]`).value;
+                const temporalDep = item.querySelector(`select[name^="temporal_dep_"]`).value;
+                const temporalDirection = item.querySelector(`select[name^="temporal_direction_"]`).value;
+                const existentialDep = item.querySelector(`select[name^="existential_dep_"]`).value;
+                const existentialDirection = item.querySelector(`select[name^="existential_direction_"]`).value;
+                
+                formData.append(`from_activity_${index}`, fromActivity);
+                formData.append(`to_activity_${index}`, toActivity);
+                formData.append(`temporal_dep_${index}`, temporalDep);
+                formData.append(`temporal_direction_${index}`, temporalDirection);
+                formData.append(`existential_dep_${index}`, existentialDep);
+                formData.append(`existential_direction_${index}`, existentialDirection);
+            });
             break;
         case 'collapse':
             formData.append('collapsed_activity', document.getElementById('collapsed_activity').value);
