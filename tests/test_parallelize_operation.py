@@ -14,10 +14,66 @@ def test_parallelize_variants():
     actual = parallelize_activities_on_variants(set(["A", "B"]), dependencies, variants)
 
     # Sort inner lists and then sort the outer list
-    expected_sorted = sorted([sorted(lst) for lst in expected])
-    actual_sorted = sorted([sorted(lst) for lst in actual])
+    expected_sorted = sorted(expected)
+    actual_sorted = sorted(actual)
 
-    assert expected_sorted == actual_sorted
+    seen = set()
+    actual_sorted_without_duplicates = []
+    for inner in actual_sorted:
+        tuple_inner = tuple(inner)
+        if tuple_inner not in seen:
+            seen.add(tuple_inner)
+            actual_sorted_without_duplicates.append(inner)
+
+    assert expected_sorted == actual_sorted_without_duplicates
+
+    variants = [["A", "B", "C"], ["A", "C"]]
+    dependencies = {
+        ("A", "B"):
+        (TemporalDependency(TemporalType.DIRECT), ExistentialDependency(ExistentialType.IMPLICATION)), # imp backward
+        ("A", "C"):
+        (TemporalDependency(TemporalType.EVENTUAL), ExistentialDependency(ExistentialType.EQUIVALENCE)),
+        ("B", "C"):
+        (TemporalDependency(TemporalType.DIRECT), ExistentialDependency(ExistentialType.IMPLICATION))
+    }
+
+    expected = [["A", "B", "C"], ["A", "C", "B"], ["B", "A", "C"], ["B", "C", "A"], ["C","A","B"],["C","B","A"]]
+    actual = parallelize_activities_on_variants(set(["A", "B", "C"]), dependencies, variants)
+
+    # Sort inner lists and then sort the outer list
+    expected_sorted = sorted(expected)
+    actual_sorted = sorted(actual)
+
+    # remove dublicates
+    seen = set()
+    actual_sorted_without_duplicates = []
+    for inner in actual_sorted:
+        tuple_inner = tuple(inner)
+        if tuple_inner not in seen:
+            seen.add(tuple_inner)
+            actual_sorted_without_duplicates.append(inner)
+
+    assert expected_sorted == actual_sorted_without_duplicates
+
+def test_parallelize_invalid_input():
+    variants = [[]]
+    dependencies = dict()
+
+    with pytest.raises(Exception):
+        parallelize_activities_on_variants(set(["A", "B"]), dependencies, variants)
+    
+    variants = [["A", "B", "C"], ["A", "C"]]
+    dependencies = {
+        ("A", "B"):
+        (TemporalDependency(TemporalType.DIRECT), ExistentialDependency(ExistentialType.IMPLICATION)), # imp backward
+        ("A", "C"):
+        (TemporalDependency(TemporalType.EVENTUAL), ExistentialDependency(ExistentialType.EQUIVALENCE)),
+        ("B", "C"):
+        (TemporalDependency(TemporalType.DIRECT), ExistentialDependency(ExistentialType.IMPLICATION))
+    }
+
+    with pytest.raises(Exception):
+        parallelize_activities_on_variants(set(["A", "C"]), dependencies, variants)
 
 def test_parallelize_activities():
     matrix = AdjacencyMatrix(activities=["A", "B"])

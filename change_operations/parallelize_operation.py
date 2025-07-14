@@ -34,11 +34,12 @@ def get_unique_elements_between_parallel_activities(variants: List[List[str]], p
     return elements_in_between
 
 def check_valid_input(
+        parallel_activities: Set[str],
         dependencies: Dict[
             Tuple[str, str],
             Tuple[Optional[TemporalDependency], Optional[ExistentialDependency]],
-        ], 
-        variants: List[List[str]], parallel_activities: List[str]
+        ],
+        variants: List[List[str]]
     ) -> bool:
     """
     Define set X = {x1, x2, …, xn} to be parallelized
@@ -48,7 +49,16 @@ def check_valid_input(
     Else: check if y is temporally independent to x1 , x2
         If this is case: parallelize  
         Else: reject 
+
+    Raises:
+        ValueError: If input is invalid
     """
+    # Check if parallel activities are in exist
+    activities = set([activity for variant in variants for activity in variant])
+    for parallel_activity in parallel_activities:
+        if parallel_activity not in activities:
+            raise ValueError(f"Activity {parallel_activity} does part of process.")
+
     # Check for existing activities y, which are in variants between elements of parallelize_activities 
     activities_in_between = get_unique_elements_between_parallel_activities(variants, parallel_activities)
 
@@ -64,11 +74,11 @@ def check_valid_input(
                 # check for dependency type 
                 if temporal_dep.type != TemporalType.INDEPENDENCE:
                     # then parallelizing not possible, problem is that we have activities happening in between
-                    return False
+                    raise ValueError(f"Activty {activity} is in between the activities to be parallelized")
     return True
 
 def parallelize_activities_on_variants(
-        parallel_activities: Set[str], 
+        parallel_activities: Set[str],
         dependencies: Dict[
             Tuple[str, str],
             Tuple[Optional[TemporalDependency], Optional[ExistentialDependency]],
@@ -89,11 +99,12 @@ def parallelize_activities_on_variants(
        The new variants with the activities parallelized
 
     Raises:
-        ValueError: If input produces contradiction
+        ValueError: If input is invalid.
     """
-
-    if not check_valid_input(dependencies, variants, parallel_activities):
-        raise ValueError("Invalid input")
+    try:
+        check_valid_input(parallel_activities, dependencies, variants)
+    except ValueError as e:
+        raise ValueError(f"Invalid input: {e}") from e
     
     perms = [list(p) for p in permutations(parallel_activities, len(parallel_activities))]
     new_variants = []
