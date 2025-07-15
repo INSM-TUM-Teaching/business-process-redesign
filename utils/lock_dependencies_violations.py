@@ -1,8 +1,5 @@
-from typing import List, Set, Dict, Tuple
+from typing import List, Dict, Tuple
 from adjacency_matrix import AdjacencyMatrix
-from acceptance_variants import generate_acceptance_variants
-from traces_to_matrix import traces_to_adjacency_matrix
-from dependencies import ExistentialType
 
 
 def locked_dependencies_preserved(initial_matrix: AdjacencyMatrix, modified_matrix: AdjacencyMatrix, locked_dependencies: Dict[Tuple[str, str], Tuple[bool, bool]], deletion_allowed: List[str]) -> bool:

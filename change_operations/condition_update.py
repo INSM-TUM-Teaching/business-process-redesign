@@ -1,8 +1,7 @@
-from typing import List, Set
+from typing import List
 from adjacency_matrix import AdjacencyMatrix
 from acceptance_variants import generate_acceptance_variants
-from traces_to_matrix import traces_to_adjacency_matrix
-from dependencies import ExistentialType
+from variants_to_matrix import variants_to_matrix
 
 def condition_update_in_variants(variants: List[List[str]], condition_activity: str, depending_activity: str) -> List[List[str]]:
     """
@@ -68,7 +67,7 @@ def condition_update(matrix: AdjacencyMatrix, condition_activity: str, depending
     modified_variants = condition_update_in_variants(variants, condition_activity, depending_activity)
     
     # Convert modified variants back to matrix
-    new_matrix = traces_to_adjacency_matrix(modified_variants, 1.0, 1.0)
+    new_matrix = variants_to_matrix(modified_variants)
     
     return new_matrix
 

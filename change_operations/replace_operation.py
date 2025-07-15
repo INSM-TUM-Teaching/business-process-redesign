@@ -1,8 +1,4 @@
-from typing import List, Set
 from adjacency_matrix import AdjacencyMatrix
-from acceptance_variants import generate_acceptance_variants
-from traces_to_matrix import traces_to_adjacency_matrix
-from dependencies import ExistentialType
 
 
 def replace_activity(

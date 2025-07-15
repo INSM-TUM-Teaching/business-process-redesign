@@ -7,7 +7,7 @@ from adjacency_matrix import AdjacencyMatrix
 from acceptance_variants import (
     generate_acceptance_variants,
 )
-from traces_to_matrix import traces_to_adjacency_matrix
+from variants_to_matrix import variants_to_matrix
 from change_operations.delete_operation import delete_activity_from_variants
 from change_operations.insert_operation import insert_into_variants
 
@@ -41,7 +41,7 @@ def move_activity(
         new_variants = move_activity_in_variants(activity, dependencies, variants, activities, total_dependencies)
     except ValueError as e:
         raise ValueError(f"The input is invalid: {str(e)}") from e
-    return  traces_to_adjacency_matrix(new_variants)
+    return  variants_to_matrix(new_variants)
 
 def move_activity_in_variants(
         activity: str,

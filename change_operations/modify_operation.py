@@ -1,9 +1,5 @@
-from typing import List, Set
+from typing import Optional
 from adjacency_matrix import AdjacencyMatrix
-from acceptance_variants import generate_acceptance_variants
-from traces_to_matrix import traces_to_adjacency_matrix
-from dependencies import ExistentialType
-from typing import Dict, Tuple, List, Optional
 from dependencies import (
     TemporalDependency,
     ExistentialDependency,

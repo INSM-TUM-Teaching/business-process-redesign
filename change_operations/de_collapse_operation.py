@@ -1,8 +1,7 @@
-from typing import List, Set
+from typing import List
 from adjacency_matrix import AdjacencyMatrix
 from acceptance_variants import generate_acceptance_variants
-from traces_to_matrix import traces_to_adjacency_matrix
-from dependencies import ExistentialType
+from variants_to_matrix import variants_to_matrix
 
 def decollapse_variant_level(main_variants: List[List[str]], collapsed_activity: str, collapsed_variants: List[List[str]]) -> List[List[str]]:
     """
@@ -80,6 +79,6 @@ def decollapse_operation(main_matrix: AdjacencyMatrix, collapsed_activity: str, 
     modified_variants = decollapse_variant_level(variants, collapsed_activity, collapsed_variants)
     
     # Convert modified variants back to matrix
-    new_matrix = traces_to_adjacency_matrix(modified_variants, 1.0, 1.0)
+    new_matrix = variants_to_matrix(modified_variants)
     
     return new_matrix

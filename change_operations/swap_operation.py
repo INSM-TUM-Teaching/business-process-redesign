@@ -1,7 +1,7 @@
 from typing import List
 from adjacency_matrix import AdjacencyMatrix
 from acceptance_variants import generate_acceptance_variants
-from traces_to_matrix import traces_to_adjacency_matrix
+from variants_to_matrix import variants_to_matrix
 
 def swap_activities_in_variants(variants: List[List[str]], activity1: str, activity2: str) -> List[List[str]]:
     """
@@ -46,6 +46,6 @@ def swap_activities(matrix: AdjacencyMatrix, activity1: str, activity2: str) -> 
     
     # Convert the modified variants back into a new adjacency matrix
     # The list of activities in the matrix remains the same.
-    new_matrix = traces_to_adjacency_matrix(modified_variants, 1.0, 1.0)
+    new_matrix = variants_to_matrix(modified_variants)
     
     return new_matrix
