@@ -3,7 +3,7 @@ from itertools import permutations
 from acceptance_variants import generate_acceptance_variants
 from adjacency_matrix import AdjacencyMatrix
 from dependencies import TemporalType, TemporalDependency, ExistentialDependency
-from traces_to_matrix import traces_to_adjacency_matrix
+from variants_to_matrix import variants_to_matrix
 
 def get_unique_elements_between_parallel_activities(variants: List[List[str]], parallel_activities: Set[str]) -> List[str]:
     """
@@ -149,6 +149,6 @@ def parallelize_activities(matrix: AdjacencyMatrix, parallel_activities: Set[str
     except ValueError as e:
         raise ValueError({e}) from e
     
-    new_matrix = traces_to_adjacency_matrix(new_variants)
+    new_matrix = variants_to_matrix(new_variants)
     
     return new_matrix
