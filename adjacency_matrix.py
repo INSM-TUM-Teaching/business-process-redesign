@@ -6,6 +6,7 @@ from dependencies import (
     ExistentialDependency,
     TemporalType,
     ExistentialType,
+    Direction,
 )
 
 
@@ -46,6 +47,15 @@ class AdjacencyMatrix:
     ) -> Optional[Tuple[Optional[TemporalDependency], Optional[ExistentialDependency]]]:
         """Retrieves the dependency between two activities."""
         return self.dependencies.get((from_activity, to_activity))
+    
+    def get_dependencies(self) -> Dict[
+        Tuple[str, str],
+        Tuple[Optional[TemporalDependency], Optional[ExistentialDependency]]]:
+
+        return self.dependencies
+    
+    def get_activities(self):
+        return self.activities
 
 
 def parse_yaml_to_adjacency_matrix(file_path: str) -> AdjacencyMatrix:
@@ -75,7 +85,11 @@ def parse_yaml_to_adjacency_matrix(file_path: str) -> AdjacencyMatrix:
         if temporal_data and temporal_data.get("type"):
             try:
                 ttype = TemporalType.from_yaml(temporal_data["type"])
-                temporal_dep_obj = TemporalDependency(type=ttype)
+                tdirection = Direction.BOTH
+                if ttype in [TemporalType.DIRECT, TemporalType.EVENTUAL]:
+                    tdirection_str = temporal_data.get("direction", "forward")
+                    tdirection = Direction.from_yaml(tdirection_str)
+                temporal_dep_obj = TemporalDependency(type=ttype, direction=tdirection)
             except ValueError as e:
                 print(
                     f"Warning: Skipping temporal dependency for ({from_activity}, {to_activity}) due to unknown type: {e}"
@@ -86,7 +100,13 @@ def parse_yaml_to_adjacency_matrix(file_path: str) -> AdjacencyMatrix:
         if existential_data and existential_data.get("type"):
             try:
                 etype = ExistentialType.from_yaml(existential_data["type"])
-                existential_dep_obj = ExistentialDependency(type=etype)
+                edirection = Direction.BOTH
+                if etype == ExistentialType.IMPLICATION:
+                    edirection_str = existential_data.get("direction", "forward")
+                    edirection = Direction.from_yaml(edirection_str)
+                existential_dep_obj = ExistentialDependency(
+                    type=etype, direction=edirection
+                )
             except ValueError as e:
                 print(
                     f"Warning: Skipping existential dependency for ({from_activity}, {to_activity}) due to unknown type: {e}"

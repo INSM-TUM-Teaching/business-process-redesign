@@ -1,8 +1,7 @@
-from typing import List, Set
+from typing import List
 from adjacency_matrix import AdjacencyMatrix
 from acceptance_variants import generate_acceptance_variants
-from traces_to_matrix import traces_to_adjacency_matrix
-from dependencies import ExistentialType
+from variants_to_matrix import variants_to_matrix
 
 def delete_activity_from_variants(variants: List[List[str]], activity: str, remove_duplicates: bool = False) -> List[List[str]]:
     """
@@ -55,9 +54,6 @@ def delete_activity(matrix: AdjacencyMatrix, activity: str) -> AdjacencyMatrix:
     if activity not in matrix.activities:
         raise ValueError(f"Activity {activity} not found in matrix")
         
-    if would_result_in_empty_process(matrix, activity):
-        raise ValueError("Deletion would result in empty process due to equivalence relationships")
-        
     # Generate variants from input matrix
     variants = generate_acceptance_variants(matrix)
     
@@ -70,28 +66,6 @@ def delete_activity(matrix: AdjacencyMatrix, activity: str) -> AdjacencyMatrix:
     # Convert modified variants back to matrix
     # Remove the activity from the list first to ensure it's not included
     new_activities = [act for act in matrix.activities if act != activity]
-    new_matrix = traces_to_adjacency_matrix(modified_variants, 1.0, 1.0)
+    new_matrix = variants_to_matrix(modified_variants)
     
     return new_matrix
-
-def would_result_in_empty_process(matrix: AdjacencyMatrix, activity: str) -> bool:
-    """
-    Checks if deleting the activity would result in an empty process due to equivalence relationships.
-    """
-    for (source, target), (_, exist_dep) in matrix.dependencies.items():
-        if exist_dep and exist_dep.type == ExistentialType.EQUIVALENCE:
-            if source == activity or target == activity:
-                # If either activity in an equivalence relationship is deleted,
-                # the other must be deleted too due to the relationship
-                other_activity = target if source == activity else source
-                # Check if this would cascade to deleting all activities
-                connected_activities = {source, target}
-                for (s, t), (_, e) in matrix.dependencies.items():
-                    if e and e.type == ExistentialType.EQUIVALENCE:
-                        if s in connected_activities or t in connected_activities:
-                            connected_activities.add(s)
-                            connected_activities.add(t)
-                # If all activities are connected by equivalence, deleting one would empty the process
-                if connected_activities.issuperset(set(matrix.activities)):
-                    return True
-    return False
