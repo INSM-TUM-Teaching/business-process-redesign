@@ -1,6 +1,6 @@
 from typing import List, Set, Dict, Tuple
 from adjacency_matrix import AdjacencyMatrix
-from acceptance_variants import generate_acceptance_variants
+from optimized_acceptance_variants import generate_optimized_acceptance_variants as generate_acceptance_variants
 from traces_to_matrix import traces_to_adjacency_matrix
 from dependencies import ExistentialType
 
