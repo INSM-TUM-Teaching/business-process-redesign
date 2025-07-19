@@ -1,8 +1,6 @@
 from typing import List
 from adjacency_matrix import AdjacencyMatrix
 from optimized_acceptance_variants import generate_optimized_acceptance_variants as generate_acceptance_variants
-from dependencies import ExistentialType
-from acceptance_variants import generate_acceptance_variants
 from variants_to_matrix import variants_to_matrix
 
 def delete_activity_from_variants(variants: List[List[str]], activity: str, remove_duplicates: bool = False) -> List[List[str]]:

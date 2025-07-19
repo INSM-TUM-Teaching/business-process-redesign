@@ -1,7 +1,6 @@
 from typing import List
 from adjacency_matrix import AdjacencyMatrix
 from optimized_acceptance_variants import generate_optimized_acceptance_variants as generate_acceptance_variants
-from acceptance_variants import generate_acceptance_variants
 from variants_to_matrix import variants_to_matrix
 
 def swap_activities_in_variants(variants: List[List[str]], activity1: str, activity2: str) -> List[List[str]]:

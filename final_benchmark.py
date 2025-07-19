@@ -1,3 +1,4 @@
+import sys
 import time
 import random
 import numpy as np
@@ -100,7 +101,6 @@ def run_comprehensive_benchmark(max_size: int = 17, repetitions: int = 2, timeou
     
     if is_windows:
         import threading
-        import ctypes
     else:
         import signal
     
@@ -169,11 +169,7 @@ def run_comprehensive_benchmark(max_size: int = 17, repetitions: int = 2, timeou
                     
                     if thread.is_alive():
                         print(f"    Timed out after {timeout_sec} seconds")
-                        # Try to terminate the thread safely (this is not guaranteed on Windows)
-                        try:
-                            thread._stop()
-                        except:
-                            pass
+                        print("    Warning: Thread is still running in the background and cannot be forcibly terminated safely.")
                 else:
                     # For Unix systems: Use the signal module
                     try:
@@ -328,9 +324,9 @@ def create_charts(results):
 if __name__ == "__main__":
     if not HAS_MATPLOTLIB:
         try:
-            import pip
+            import subprocess
             print("Installing matplotlib...")
-            pip.main(['install', 'matplotlib'])
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "matplotlib"])
             import matplotlib.pyplot as plt
             HAS_MATPLOTLIB = True
         except:

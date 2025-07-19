@@ -154,24 +154,29 @@ def generate_optimized_acceptance_variants(adj_matrix: AdjacencyMatrix) -> List[
         """
         if not current_path:
             return True
-            
-        # Check direct constraints
+
+        next_direct = direct_constraints.get(next_idx, set())
+        next_reverse_direct = reverse_direct_constraints.get(next_idx, set())
+
         for idx in current_path:
+            idx_direct = direct_constraints.get(idx, set())
+            idx_reverse_direct = reverse_direct_constraints.get(idx, set())
+
             # If there's a direct constraint from next_idx -> idx, it's invalid
-            if next_idx in direct_constraints and idx in direct_constraints[next_idx]:
+            if idx in next_direct:
                 return False
-                
+
             # If there's a direct constraint from idx -> next_idx where idx is not the last element
-            if idx in direct_constraints and next_idx in direct_constraints[idx] and idx != current_path[-1]:
+            if next_idx in idx_direct and idx != current_path[-1]:
                 return False
-                
+
             # Check reverse direct constraints
-            if next_idx in reverse_direct_constraints and idx in reverse_direct_constraints[next_idx]:
+            if idx in next_reverse_direct:
                 return False
-                
-            if idx in reverse_direct_constraints and next_idx in reverse_direct_constraints[idx] and idx != current_path[-1]:
+
+            if next_idx in idx_reverse_direct and idx != current_path[-1]:
                 return False
-        
+
         return True
     
     def is_valid_permutation(perm: List[int]) -> bool:
