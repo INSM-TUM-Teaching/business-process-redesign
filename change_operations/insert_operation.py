@@ -9,7 +9,7 @@ from acceptance_variants import (
     satisfies_existential_constraints,
     satisfies_temporal_constraints,
 )
-from traces_to_matrix import traces_to_adjacency_matrix
+from variants_to_matrix import variants_to_matrix
 from utils.split_dependencies import split_dependencies
 from utils.check_valid_input import is_valid_input
 
@@ -69,7 +69,7 @@ def insert_activity(
         new_variants =  insert_into_variants(activity, dependencies, total_dependencies, matrix.get_activities(), variants)
     except ValueError as e:
         raise ValueError(f"The input is invalid: {e}")
-    return traces_to_adjacency_matrix(new_variants)
+    return variants_to_matrix(new_variants)
 
 def insert_into_variants(
     activity: str,

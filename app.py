@@ -3,14 +3,14 @@ import os
 import yaml
 import copy
 from werkzeug.utils import secure_filename
-from adjacency_matrix import AdjacencyMatrix, parse_yaml_to_adjacency_matrix
+from adjacency_matrix import parse_yaml_to_adjacency_matrix
 
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from flask import Flask, render_template, request, jsonify
 import json
-from traces_to_matrix import traces_to_adjacency_matrix
+from variants_to_matrix import variants_to_matrix
 from dependencies import TemporalType, ExistentialType, Direction, TemporalDependency, ExistentialDependency
 from change_operations.delete_operation import delete_activity
 from change_operations.insert_operation import insert_activity
@@ -250,7 +250,7 @@ def process_input():
             if not traces:
                 return jsonify({"success": False, "error": "No traces provided"})
             
-            original_matrix = traces_to_adjacency_matrix(traces)
+            original_matrix = variants_to_matrix(traces)
             current_matrix = copy.deepcopy(original_matrix)
 
         return jsonify({"success": True, "message": "Matrix generated successfully."})

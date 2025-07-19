@@ -1,8 +1,9 @@
-from typing import List, Set
+from typing import List
 from adjacency_matrix import AdjacencyMatrix
 from optimized_acceptance_variants import generate_optimized_acceptance_variants as generate_acceptance_variants
-from traces_to_matrix import traces_to_adjacency_matrix
 from dependencies import ExistentialType
+from acceptance_variants import generate_acceptance_variants
+from variants_to_matrix import variants_to_matrix
 
 def skip_activity_in_variants(variants: List[List[str]], optional_activity: str) -> List[List[str]]:
     """
@@ -65,7 +66,7 @@ def skip_activity(matrix: AdjacencyMatrix, optional_activity: str) -> AdjacencyM
     
         
     # Convert modified variants back to matrix
-    new_matrix = traces_to_adjacency_matrix(modified_variants, 1.0, 1.0)
+    new_matrix = variants_to_matrix(modified_variants)
     
     return new_matrix
 
