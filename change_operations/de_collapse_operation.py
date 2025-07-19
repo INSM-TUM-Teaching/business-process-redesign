@@ -1,6 +1,6 @@
 from typing import List
 from adjacency_matrix import AdjacencyMatrix
-from acceptance_variants import generate_acceptance_variants
+from optimized_acceptance_variants import generate_optimized_acceptance_variants as generate_acceptance_variants
 from variants_to_matrix import variants_to_matrix
 
 def decollapse_variant_level(main_variants: List[List[str]], collapsed_activity: str, collapsed_variants: List[List[str]]) -> List[List[str]]:

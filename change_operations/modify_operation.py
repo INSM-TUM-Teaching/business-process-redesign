@@ -1,5 +1,8 @@
 from typing import Optional
 from adjacency_matrix import AdjacencyMatrix
+from optimized_acceptance_variants import generate_optimized_acceptance_variants as generate_acceptance_variants
+from dependencies import ExistentialType
+from typing import Dict, Tuple, List, Optional
 from dependencies import (
     TemporalDependency,
     ExistentialDependency,

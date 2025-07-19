@@ -1,4 +1,6 @@
 from adjacency_matrix import AdjacencyMatrix
+from optimized_acceptance_variants import generate_optimized_acceptance_variants as generate_acceptance_variants
+from dependencies import ExistentialType
 
 
 def replace_activity(

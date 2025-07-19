@@ -1,6 +1,6 @@
 from typing import List
 from adjacency_matrix import AdjacencyMatrix
-from acceptance_variants import generate_acceptance_variants
+from optimized_acceptance_variants import generate_optimized_acceptance_variants as generate_acceptance_variants
 from variants_to_matrix import variants_to_matrix
 
 def condition_update_in_variants(variants: List[List[str]], condition_activity: str, depending_activity: str) -> List[List[str]]:
