@@ -9,9 +9,10 @@ from acceptance_variants import (
     satisfies_existential_constraints,
     satisfies_temporal_constraints,
 )
-from variants_to_matrix import variants_to_matrix
+from optimized_acceptance_variants import generate_optimized_acceptance_variants as generate_acceptance_variants
 from utils.split_dependencies import split_dependencies
 from utils.check_valid_input import is_valid_input
+from variants_to_matrix import variants_to_matrix
 
 def search_valid_positions_to_insert(
     variant: List[str],
@@ -69,7 +70,7 @@ def insert_activity(
         new_variants =  insert_into_variants(activity, dependencies, total_dependencies, matrix.get_activities(), variants)
     except ValueError as e:
         raise ValueError(f"The input is invalid: {e}")
-    return variants_to_matrix(new_variants)
+    return variants_to_matrix(new_variants, matrix.activities)
 
 def insert_into_variants(
     activity: str,

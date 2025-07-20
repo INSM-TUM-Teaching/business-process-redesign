@@ -64,7 +64,7 @@ def skip_activity(matrix: AdjacencyMatrix, optional_activity: str) -> AdjacencyM
     
         
     # Convert modified variants back to matrix
-    new_matrix = variants_to_matrix(modified_variants)
+    new_matrix = variants_to_matrix(modified_variants, matrix.activities)
     
     return new_matrix
 

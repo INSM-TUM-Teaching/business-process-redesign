@@ -142,6 +142,6 @@ def collapse_operation(main_matrix: AdjacencyMatrix, collapsed_activity: str, co
     modified_variants = collapse_variant_level(main_matrix, variants, collapsed_activity, collapse_activities)
     
     # Convert modified variants back to matrix
-    new_matrix = variants_to_matrix(modified_variants)
+    new_matrix = variants_to_matrix(modified_variants, main_matrix.activities)
     
     return new_matrix

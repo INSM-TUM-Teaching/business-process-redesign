@@ -10,6 +10,7 @@ from dependencies import (
 )
 from adjacency_matrix import AdjacencyMatrix
 from constraint_logic import check_temporal_relationship, check_existential_relationship
+from acceptance_variants import satisfies_temporal_constraints, satisfies_existential_constraints
 
 
 def generate_optimized_acceptance_variants(adj_matrix: AdjacencyMatrix) -> List[List[str]]:
@@ -238,5 +239,10 @@ def generate_optimized_acceptance_variants(adj_matrix: AdjacencyMatrix) -> List[
     for size in range(1, n + 1):
         # Process subsets of each size separately to improve locality
         process_subsets_of_size(size)
-    
+
+    copy_variants = acceptance_variants.copy()
+    for variant in copy_variants:
+        if not satisfies_temporal_constraints(variant, temporal_deps):
+            acceptance_variants.remove(variant)
+
     return acceptance_variants

@@ -149,6 +149,6 @@ def parallelize_activities(matrix: AdjacencyMatrix, parallel_activities: Set[str
     except ValueError as e:
         raise ValueError({e}) from e
     
-    new_matrix = variants_to_matrix(new_variants)
+    new_matrix = variants_to_matrix(new_variants, matrix.activities)
     
     return new_matrix

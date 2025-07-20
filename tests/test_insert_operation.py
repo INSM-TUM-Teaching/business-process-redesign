@@ -8,7 +8,7 @@ from dependencies import (
     Direction,
 )
 from change_operations.insert_operation import insert_activity
-from utils.check_contradictions import has_existential_contradiction, has_temporal_contradiction
+from utils.check_contradictions import has_existential_contradiction, has_temporal_contradiction, _dfs
 
 
 
@@ -134,3 +134,22 @@ def test_has_temporal_contradiction():
     existential_deps = {}
     activities = ["A", "B", "C"]
     assert has_temporal_contradiction(temporal_deps, existential_deps, activities, "B", ["A", "B", "C"]) is True
+
+def test_has_temporal_loop():
+    activities = ["A", "B", "C", "D"]
+    temporal_deps = {
+        ('A', 'B'): TemporalDependency(TemporalType.DIRECT, Direction.FORWARD),
+        ('A', 'C'): TemporalDependency(TemporalType.EVENTUAL, Direction.FORWARD),
+        ('A', 'D'): TemporalDependency(TemporalType.EVENTUAL, Direction.FORWARD),
+        ('B', 'A'): TemporalDependency(TemporalType.DIRECT, Direction.BACKWARD),
+        ('B', 'C'): TemporalDependency(TemporalType.EVENTUAL, Direction.FORWARD),
+        ('B', 'D'): TemporalDependency(TemporalType.EVENTUAL, Direction.FORWARD),
+        ('C', 'A'): TemporalDependency(TemporalType.EVENTUAL, Direction.BACKWARD),
+        ('C', 'B'): TemporalDependency(TemporalType.EVENTUAL, Direction.BACKWARD),
+        ('C', 'D'): TemporalDependency(TemporalType.INDEPENDENCE, Direction.BOTH),
+        ('D', 'C'): TemporalDependency(TemporalType.INDEPENDENCE, Direction.BOTH),
+        ('D', 'A'): TemporalDependency(TemporalType.EVENTUAL, Direction.BACKWARD),
+        ('D', 'B'): TemporalDependency(TemporalType.EVENTUAL, Direction.BACKWARD),
+    }
+    for activity in activities:
+        _dfs(temporal_deps, activity, set(), set())
