@@ -62,23 +62,19 @@ def modify_dependency(
         # way as also written in method call - no inversion of the dependency needed 
         if (from_act == from_activity and to_act == to_activity):
             if existential_dep:
-                if existential_direction != Direction.BOTH:
-                    existential_direction = Direction.FORWARD if existential_direction == Direction.BACKWARD else Direction.BACKWARD
                 direction = existential_direction if existential_direction is not None else existential_dependency.direction
                 existential_dependency = ExistentialDependency(existential_dep, direction=direction)
             if temporal_dep:
-                if temporal_direction != Direction.BOTH:
-                    temporal_direction = Direction.FORWARD if temporal_direction == Direction.BACKWARD else Direction.BACKWARD
                 direction = temporal_direction if temporal_direction is not None else temporal_dependency.direction
                 temporal_dependency = TemporalDependency(temporal_dep, direction=direction)
         elif (from_act == to_activity and to_act == from_activity):
             if existential_dep:
-                if existential_direction != Direction.BOTH:
+                if existential_direction is not None and existential_direction != Direction.BOTH:
                     existential_direction = Direction.FORWARD if existential_direction == Direction.BACKWARD else Direction.BACKWARD
                 direction = existential_direction if existential_direction is not None else existential_dependency.direction
                 existential_dependency = ExistentialDependency(existential_dep, direction=direction)
             if temporal_dep:
-                if temporal_direction != Direction.BOTH:
+                if temporal_direction is not None and temporal_direction != Direction.BOTH:
                     temporal_direction = Direction.FORWARD if temporal_direction == Direction.BACKWARD else Direction.BACKWARD
                 direction = temporal_direction if temporal_direction is not None else temporal_dependency.direction
                 temporal_dependency = TemporalDependency(temporal_dep, direction=direction)
