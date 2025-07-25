@@ -336,6 +336,38 @@ function updateOperationInputs() {
                 }
             }, 0);
             break;
+        case 'move':
+            inputsDiv.innerHTML = `
+                <div class="form-group">
+                    <label class="form-label" for="activity">Activity to Move:</label>
+                    <input type="text" id="activity" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">New Dependencies for the activity:</label>
+                    <div id="dependencies-container">
+                        <!-- Dependencies will be added here -->
+                    </div>
+                    <button type="button" class="btn btn-secondary" onclick="addDependency()">Add Dependency</button>
+                </div>`;
+            break;
+        case 'parallelize':
+            inputsDiv.innerHTML = `
+                <div class="form-group">
+                    <label class="form-label" for="parallel_activities">Activities to Parallelize (comma-separated):</label>
+                    <input type="text" id="parallel_activities" class="form-control">
+                </div>`;
+            break;
+        case 'condition_update':
+            inputsDiv.innerHTML = `
+                <div class="form-group">
+                    <label class="form-label" for="condition_activity">Condition Activity:</label>
+                    <input type="text" id="condition_activity" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="depending_activity">Depending Activity:</label>
+                    <input type="text" id="depending_activity" class="form-control">
+                </div>`;
+            break;
     }
 }
 
@@ -573,6 +605,35 @@ function performChangeOperation() {
                 formData.append('existential_dep', existentialDep);
                 formData.append('existential_direction', existentialDirection);
             }
+            break;
+        case 'move':
+            formData.append('activity', document.getElementById('activity').value);
+            
+            const moveDependencyItems = document.querySelectorAll('.dependency-item');
+            formData.append('dependency_count', moveDependencyItems.length);
+            
+            moveDependencyItems.forEach((item, index) => {
+                const fromActivity = item.querySelector(`input[name^="from_activity_"]`).value;
+                const toActivity = item.querySelector(`input[name^="to_activity_"]`).value;
+                const temporalDep = item.querySelector(`select[name^="temporal_dep_"]`).value;
+                const temporalDirection = item.querySelector(`select[name^="temporal_direction_"]`).value;
+                const existentialDep = item.querySelector(`select[name^="existential_dep_"]`).value;
+                const existentialDirection = item.querySelector(`select[name^="existential_direction_"]`).value;
+                
+                formData.append(`from_activity_${index}`, fromActivity);
+                formData.append(`to_activity_${index}`, toActivity);
+                formData.append(`temporal_dep_${index}`, temporalDep);
+                formData.append(`temporal_direction_${index}`, temporalDirection);
+                formData.append(`existential_dep_${index}`, existentialDep);
+                formData.append(`existential_direction_${index}`, existentialDirection);
+            });
+            break;
+        case 'parallelize':
+            formData.append('parallel_activities', document.getElementById('parallel_activities').value.split(',').map(s => s.trim()));
+            break;
+        case 'condition_update':
+            formData.append('condition_activity', document.getElementById('condition_activity').value);
+            formData.append('depending_activity', document.getElementById('depending_activity').value);
             break;
     }
 

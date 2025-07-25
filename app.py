@@ -20,6 +20,9 @@ from change_operations.replace_operation import replace_activity
 from change_operations.collapse_operation import collapse_operation
 from change_operations.de_collapse_operation import decollapse_operation
 from change_operations.modify_operation import modify_dependency
+from change_operations.move_operation import move_activity
+from change_operations.parallelize_operation import parallelize_activities
+from change_operations.condition_update import condition_update
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'temp_uploads'
@@ -388,6 +391,41 @@ def change_matrix():
             modified_matrix = modify_dependency(current_matrix, from_activity, to_activity, 
                                               temporal_dep, existential_dep, 
                                               temporal_direction, existential_direction)
+        elif operation == 'move':
+            activity = request.form.get('activity')
+            dependencies = {}
+            dependency_count = int(request.form.get('dependency_count', 0))
+            
+            for i in range(dependency_count):
+                from_activity = request.form.get(f'from_activity_{i}')
+                to_activity = request.form.get(f'to_activity_{i}')
+                temporal_dep_str = request.form.get(f'temporal_dep_{i}')
+                existential_dep_str = request.form.get(f'existential_dep_{i}')
+                temporal_direction_str = request.form.get(f'temporal_direction_{i}')
+                existential_direction_str = request.form.get(f'existential_direction_{i}')
+                
+                if from_activity and to_activity:
+                    temporal_dep = None
+                    existential_dep = None
+                    
+                    if temporal_dep_str:
+                        temporal_direction = Direction[temporal_direction_str] if temporal_direction_str else Direction.FORWARD
+                        temporal_dep = TemporalDependency(TemporalType[temporal_dep_str], temporal_direction)
+                    
+                    if existential_dep_str:
+                        existential_direction = Direction[existential_direction_str] if existential_direction_str else Direction.FORWARD
+                        existential_dep = ExistentialDependency(ExistentialType[existential_dep_str], existential_direction)
+                    
+                    dependencies[(from_activity, to_activity)] = (temporal_dep, existential_dep)
+            
+            modified_matrix = move_activity(current_matrix, activity, dependencies)
+        elif operation == 'parallelize':
+            parallel_activities = set(request.form.get('parallel_activities').split(','))
+            modified_matrix = parallelize_activities(current_matrix, parallel_activities)
+        elif operation == 'condition_update':
+            condition_activity = request.form.get('condition_activity')
+            depending_activity = request.form.get('depending_activity')
+            modified_matrix = condition_update(current_matrix, condition_activity, depending_activity)
 
         if modified_matrix:
             locks = []
