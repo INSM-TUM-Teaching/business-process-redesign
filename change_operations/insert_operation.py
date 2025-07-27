@@ -117,8 +117,9 @@ def insert_into_variants(
     new_variants = []
 
     if satisfies_existential_constraints(
-        set(activity), new_activities, existential_deps
+        {activity}, new_activities, existential_deps
     ):
+        print(activity, existential_deps)
         new_variants.append([activity])
 
     for variant in variants:

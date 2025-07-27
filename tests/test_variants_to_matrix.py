@@ -53,7 +53,7 @@ def test_get_temporal_relation():
 def test_variants_to_matrix():
     variants = [["A", "B", "C"],["A", "C", "B"]]
 
-    matrix = variants_to_matrix(variants)
+    matrix = variants_to_matrix(variants, ["A", "B", "C"])
 
     assert matrix.activities == ["A", "B", "C"]
 
@@ -90,7 +90,7 @@ def test_variants_to_matrix():
 def test_variants_to_matrix_XOR():
     variants = [["A", "B"],["A", "C"]]
 
-    matrix = variants_to_matrix(variants)
+    matrix = variants_to_matrix(variants, ["A", "B", "C"])
 
     assert matrix.activities == ["A", "B", "C"]
 
