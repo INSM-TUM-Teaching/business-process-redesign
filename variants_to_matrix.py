@@ -95,7 +95,7 @@ def get_temporal_relation(a, b, variants: List[List[str]]) -> Tuple[TemporalType
         return (TemporalType.INDEPENDENCE, Direction.BOTH)
     return (None, None)
 
-def variants_to_matrix(variants: List[List[str]]) -> AdjacencyMatrix:
+def variants_to_matrix(variants: List[List[str]], original_activities: List[str] = None) -> AdjacencyMatrix:
     """
     Converts a list of variants into an AdjacencyMatrix.
     """
@@ -105,9 +105,19 @@ def variants_to_matrix(variants: List[List[str]]) -> AdjacencyMatrix:
     for variant in variants:
         activities.update(variant)
 
-    activity_list = list(activities)
-    activity_list.sort()
-    matrix = AdjacencyMatrix(activity_list)
+    if original_activities:
+        original_set = set(original_activities)
+
+        # Items that are in the original order
+        ordered = [a for a in original_activities if a in activities]
+
+        # Additional items not found in original_activities, keep their relative order
+        extras = [a for a in activities if a not in original_set]
+
+        activities_list = ordered + extras
+    else:
+        activities_list = list(activities)
+    matrix = AdjacencyMatrix(activities_list)
 
     combinations = set(frozenset(variant) for variant in variants)
 

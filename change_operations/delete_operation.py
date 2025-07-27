@@ -2,6 +2,8 @@ from typing import List
 from adjacency_matrix import AdjacencyMatrix
 from optimized_acceptance_variants import generate_optimized_acceptance_variants as generate_acceptance_variants
 from variants_to_matrix import variants_to_matrix
+from acceptance_variants import satisfies_temporal_constraints
+from utils.split_dependencies import split_dependencies
 
 def delete_activity_from_variants(variants: List[List[str]], activity: str, remove_duplicates: bool = False) -> List[List[str]]:
     """
@@ -56,7 +58,7 @@ def delete_activity(matrix: AdjacencyMatrix, activity: str) -> AdjacencyMatrix:
         
     # Generate variants from input matrix
     variants = generate_acceptance_variants(matrix)
-    
+
     # Remove activity from variants
     modified_variants = delete_activity_from_variants(variants, activity)
     
@@ -66,6 +68,6 @@ def delete_activity(matrix: AdjacencyMatrix, activity: str) -> AdjacencyMatrix:
     # Convert modified variants back to matrix
     # Remove the activity from the list first to ensure it's not included
     new_activities = [act for act in matrix.activities if act != activity]
-    new_matrix = variants_to_matrix(modified_variants)
-    
+    new_matrix = variants_to_matrix(modified_variants, matrix.activities)
+
     return new_matrix

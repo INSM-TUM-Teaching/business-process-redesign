@@ -42,10 +42,10 @@ def has_existential_contradiction(
         if isinstance(dep, tuple):
             dep = dep[1]  # Extract existential dependency from tuple
         
-        if dep is None:
+        if dep is None or dep.direction == Direction.BACKWARD:
             continue
 
-        if dep.type == ExistentialType.IMPLICATION:
+        if dep.type == ExistentialType.IMPLICATION and dep.direction == Direction.FORWARD:
             constraint = Implies(var_a, var_b)
         elif dep.type == ExistentialType.EQUIVALENCE:
             constraint = var_a == var_b
@@ -66,7 +66,8 @@ def has_existential_contradiction(
 def _dfs(
     temporal_deps: Dict[Tuple[str, str], TemporalDependency],
     cur_activity: str,
-    visited: Set[str]
+    visited: Set[str],
+    visiting: Set[str]
 ):
     """
     Depth first search recursively checking if there are loops in temporal dependencies.
@@ -82,36 +83,30 @@ def _dfs(
     Raises:
         RecursionError if there is a loop.
     """
-    # Convert dependencies to a normalized form to avoid processing redundant constraints
-    normalized_deps = {}
+    if cur_activity in visiting:
+        raise RecursionError(f"Cycle detected at '{cur_activity}'")
+    if cur_activity in visited:
+        return
+
+    visiting.add(cur_activity)
+    
     for (source, target), dep in temporal_deps.items():
         if dep.type == TemporalType.INDEPENDENCE:
             continue
         
-        # Determine the actual direction based on the dependency direction
+        # Determine actual direction
         if dep.direction == Direction.FORWARD:
-            # source comes before target
             before, after = source, target
         elif dep.direction == Direction.BACKWARD:
-            # source comes after target (so target comes before source)
             before, after = target, source
-        else:  # Direction.BOTH - skip for cycle detection
+        else:
             continue
         
-        # Normalize to always have the "before" activity as the key
-        # This avoids processing the same constraint twice
-        constraint_key = (before, after)
-        if constraint_key not in normalized_deps:
-            normalized_deps[constraint_key] = dep
-    
-    # Now process the normalized dependencies
-    for (before, after), dep in normalized_deps.items():
         if after == cur_activity:
-            if before in visited:
-                raise RecursionError(f"Temporal contradiction: cycle detected between '{before}' and '{cur_activity}'")
-            visited.add(before)
-            visited = visited | _dfs(temporal_deps, before, visited)
-    return visited
+            _dfs(temporal_deps, before, visited, visiting)
+    
+    visiting.remove(cur_activity)
+    visited.add(cur_activity)
 
 def has_temporal_contradiction(
     temporal_deps: Dict[Tuple[str, str], TemporalDependency],
@@ -184,7 +179,7 @@ def has_temporal_contradiction(
 
     try:
         for a in activities:
-            _dfs(temporal_deps, a, set())
+            _dfs(temporal_deps, a, set(), set())
     except RecursionError:
         return True
 

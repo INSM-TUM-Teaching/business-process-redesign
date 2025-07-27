@@ -363,8 +363,8 @@ dependencies:
 - from: WR
   to: DR
   temporal:
-    type: eventual
-    symbol: ≺
+    type: direct
+    symbol: ≺_d
     direction: forward
   existential:
     type: independence
@@ -523,8 +523,8 @@ dependencies:
 - from: DR
   to: WR
   temporal:
-    type: eventual
-    symbol: ≺
+    type: direct
+    symbol: ≺_d
     direction: backward
   existential:
     type: independence
@@ -837,9 +837,9 @@ dependencies:
     symbol: ≺
     direction: backward
   existential:
-    type: independence
-    symbol: '-'
-    direction: both
+    type: implication
+    symbol: ⇒
+    direction: backward
 - from: CR
   to: WR
   temporal:
@@ -847,9 +847,9 @@ dependencies:
     symbol: ≺
     direction: backward
   existential:
-    type: implication
-    symbol: ⇒
-    direction: backward
+    type: independence
+    symbol: '-'
+    direction: both
 - from: CR
   to: DR
   temporal:
@@ -1537,14 +1537,14 @@ dependencies:
     symbol: ≺_d
     direction: backward
   existential:
-    type: equivalence
+    type: implication
     symbol: ⇒
-    direction: both
+    direction: backward
 - from: CS
   to: CM
   temporal:
-    type: direct
-    symbol: ≺_d
+    type: eventual
+    symbol: ≺
     direction: backward
   existential:
     type: independence
@@ -1877,8 +1877,8 @@ dependencies:
     symbol: '-'
     direction: both
   existential:
-    type: negated equivalence
-    symbol: <=/=>
+    type: nand
+    symbol: '|'
     direction: both
 - from: CI
   to: CN
@@ -2037,8 +2037,8 @@ dependencies:
     symbol: '-'
     direction: both
   existential:
-    type: negated equivalence
-    symbol: <=/=>
+    type: nand
+    symbol: '|'
     direction: both
 - from: CD
   to: CN
@@ -2357,8 +2357,8 @@ dependencies:
     symbol: '-'
     direction: both
   existential:
-    type: negated equivalence
-    symbol: <=/=>
+    type: nand
+    symbol: '|'
     direction: both
 - from: CO
   to: CN
@@ -2517,8 +2517,8 @@ dependencies:
     symbol: '-'
     direction: both
   existential:
-    type: negated equivalence
-    symbol: <=/=>
+    type: nand
+    symbol: '|'
     direction: both
 - from: GP
   to: CN

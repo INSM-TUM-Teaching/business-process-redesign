@@ -41,7 +41,7 @@ def move_activity(
         new_variants = move_activity_in_variants(activity, dependencies, variants, activities, total_dependencies)
     except ValueError as e:
         raise ValueError(f"The input is invalid: {str(e)}") from e
-    return  variants_to_matrix(new_variants)
+    return  variants_to_matrix(new_variants, matrix.activities)
 
 def move_activity_in_variants(
         activity: str,

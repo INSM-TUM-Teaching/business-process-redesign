@@ -67,7 +67,7 @@ def condition_update(matrix: AdjacencyMatrix, condition_activity: str, depending
     modified_variants = condition_update_in_variants(variants, condition_activity, depending_activity)
     
     # Convert modified variants back to matrix
-    new_matrix = variants_to_matrix(modified_variants)
+    new_matrix = variants_to_matrix(modified_variants, matrix.activities)
     
     return new_matrix
 
