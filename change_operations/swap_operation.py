@@ -46,6 +46,6 @@ def swap_activities(matrix: AdjacencyMatrix, activity1: str, activity2: str) -> 
     
     # Convert the modified variants back into a new adjacency matrix
     # The list of activities in the matrix remains the same.
-    new_matrix = variants_to_matrix(modified_variants)
+    new_matrix = variants_to_matrix(modified_variants, matrix.activities)
     
     return new_matrix

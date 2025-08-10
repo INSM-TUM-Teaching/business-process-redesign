@@ -56,7 +56,7 @@ def delete_activity(matrix: AdjacencyMatrix, activity: str) -> AdjacencyMatrix:
         
     # Generate variants from input matrix
     variants = generate_acceptance_variants(matrix)
-    
+
     # Remove activity from variants
     modified_variants = delete_activity_from_variants(variants, activity)
     
@@ -66,6 +66,6 @@ def delete_activity(matrix: AdjacencyMatrix, activity: str) -> AdjacencyMatrix:
     # Convert modified variants back to matrix
     # Remove the activity from the list first to ensure it's not included
     new_activities = [act for act in matrix.activities if act != activity]
-    new_matrix = variants_to_matrix(modified_variants)
-    
+    new_matrix = variants_to_matrix(modified_variants, matrix.activities)
+
     return new_matrix

@@ -84,6 +84,7 @@ class ExistentialType(Enum):
             "implication": cls.IMPLICATION,
             "equivalence": cls.EQUIVALENCE,
             "negated equivalence": cls.NEGATED_EQUIVALENCE,
+            "negated_equivalence": cls.NEGATED_EQUIVALENCE,
             "nand": cls.NAND,
             "or": cls.OR,
             "independence": cls.INDEPENDENCE,

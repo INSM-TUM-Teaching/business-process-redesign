@@ -1,6 +1,6 @@
 from typing import List, Set, Tuple, Dict, Optional
 from itertools import permutations
-from acceptance_variants import generate_acceptance_variants
+from optimized_acceptance_variants import generate_optimized_acceptance_variants as generate_acceptance_variants
 from adjacency_matrix import AdjacencyMatrix
 from dependencies import TemporalType, TemporalDependency, ExistentialDependency
 from variants_to_matrix import variants_to_matrix
@@ -110,16 +110,21 @@ def parallelize_activities_on_variants(
     new_variants = []
 
     for variant in variants:
-        pos = 0
+        pos = -1
+        variant_without_parallels = variant.copy()
         for activity in parallel_activities:
             if activity in variant:
-                pos = variant.index(activity)
-                variant.remove(activity)
+                if pos == -1:
+                    pos = variant.index(activity)
+                variant_without_parallels.remove(activity)
+        if pos == -1:
+            new_variants.append(variant.copy())
+            continue
         for permutation in perms:
-            new_variant = variant.copy()
+            new_variant = variant_without_parallels.copy()
             for activity in permutation:
                 new_variant.insert(pos, activity)
-            new_variants.append(new_variant.copy())
+            new_variants.append(new_variant)
 
     return new_variants
 
@@ -149,6 +154,6 @@ def parallelize_activities(matrix: AdjacencyMatrix, parallel_activities: Set[str
     except ValueError as e:
         raise ValueError({e}) from e
     
-    new_matrix = variants_to_matrix(new_variants)
+    new_matrix = variants_to_matrix(new_variants, matrix.activities)
     
     return new_matrix
