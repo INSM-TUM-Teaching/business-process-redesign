@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Business Process Redesign Tool</title>
+        <link rel="stylesheet" type="text/css" href="/static/site.css" />
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    </head>
+
+    <body>
+        <nav class="navbar">
+            <a href="/" class="navbar-brand">Business Process Redesign</a>
+        </nav>
+
+        <main class="body-content">
+            
+<!-- Tab Navigation -->
+<div class="tabs">
+    <button class="tab active">Adjacency Matrix</button>
+</div>
+
+<div id="adjacency-matrix" class="tab-content active">
+    <div class="container">
+        <h2 class="section-title">Adjacency Matrix</h2>
+        
+        <div class="grid grid-2">
+            <div class="card">
+                <h3 class="card-title">Input</h3>
+                <div class="form-group">
+                    <label class="form-label">Enter process traces (one per line, activities separated by commas):</label>
+                    <textarea class="form-control textarea" id="traces-input" placeholder="A,B,C,D&#10;A,C,B,D&#10;A,B,D"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Or upload an Adjacency Matrix in YAML format:</label>
+                    <input type="file" class="form-control" id="yaml-file" accept=".yaml,.yml">
+                </div>
+                
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="processInput()">Generate Matrix</button>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3 class="card-title">Matrix Display</h3>
+                <div class="matrix-display" id="matrix-display">
+                    <div class="alert alert-info">
+                        Provide traces or upload a file to generate the matrix.
+                    </div>
+                </div>
+                <div id="lock-dependencies" class="form-group" style="margin-top: 20px;">
+                    <h4>Lock Dependencies</h4>
+                    <div class="form-row">
+                        <select id="lock-from-activity" class="form-control" style="display: inline-block; width: 45%; margin-right: 5%;">
+                            <option value="">From Activity</option>
+                        </select>
+                        <select id="lock-to-activity" class="form-control" style="display: inline-block; width: 45%;">
+                            <option value="">To Activity</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-top: 10px;">
+                        <label><input type="checkbox" id="lock-temporal"> Lock Temporal</label>
+                        <label style="margin-left: 20px;"><input type="checkbox" id="lock-existential"> Lock Existential</label>
+                    </div>
+                    <button type="button" class="btn btn-secondary" onclick="addLock()">Add Lock</button>
+                    <ul id="locks-list" style="margin-top: 10px; list-style: none; padding: 0;"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="change-operations" class="tab-content active" style="margin-top: 20px;">
+    <div class="container">
+        <h2 class="section-title">Change Operations</h2>
+        <div class="grid grid-2">
+            <div class="card">
+                <h3 class="card-title">Operation Configuration</h3>
+                <div class="form-group">
+                    <label class="form-label" for="matrix-source-select">Apply Operation To:</label>
+                    <select id="matrix-source-select" class="form-control">
+                        <option value="original">Initial Matrix</option>
+                        <option value="modified">Modified Matrix</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="change-operation-select">Select Change Operation:</label>
+                    <select id="change-operation-select" class="form-control">
+                        <option value="">--Please choose an operation--</option>
+                        <option value="delete">Delete Activity</option>
+                        <option value="insert">Insert Activity</option>
+                        <option value="collapse">Collapse Activities</option>
+                        <option value="de-collapse">De-collapse Activity</option>
+                        <option value="replace">Replace Activity</option>
+                        <option value="skip">Skip Activity</option>
+                        <option value="swap">Swap Activities</option>
+                        <option value="modify">Modify Dependency</option>
+                        <option value="move">Move Activity</option>
+                        <option value="parallelize">Parallelize Activities</option>
+                        <option value="condition_update">Conditional Update</option>
+                    </select>
+                </div>
+                <div id="operation-inputs"></div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="performChangeOperation()">Perform Operation</button>
+                </div>
+            </div>
+            <div class="card">
+                <h3 class="card-title" id="source-matrix-title">Source Matrix</h3>
+                <div class="matrix-display" id="original-matrix-display">
+                    <div class="alert alert-info">
+                        Generate a matrix first to perform operations on it.
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="grid grid-1" style="margin-top: 20px;">
+            <div class="card">
+                <h3 class="card-title">Modified Matrix</h3>
+                <div class="matrix-display" id="modified-matrix-display">
+                    <div class="alert alert-info">
+                        The result of the operation will be displayed here.
+                    </div>
+                </div>
+                <div class="btn-group" style="margin-top: 1rem;">
+                    <button class="btn btn-secondary" onclick="exportModifiedMatrix()" id="export-button" style="display: none;">
+                        Export Modified Matrix (YAML)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+        </main>
+
+        <script src="/static/app.js"></script>
+    </body>
+</html>
