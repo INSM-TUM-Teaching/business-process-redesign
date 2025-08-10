@@ -26,6 +26,7 @@ from change_operations.condition_update import condition_update
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'temp_uploads'
+app.config['FREEZER_RELATIVE_URLS'] = True # Enable relative URLs for static files
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 current_matrix = None
