@@ -1,15 +1,15 @@
-// Global variables to store matrix data
-let originalMatrixData = null;
-let modifiedMatrixData = null;
+// Global variables to store dependency data
+let originalDependenciesData = null;
+let modifiedDependenciesData = null;
 
 let lockedDependencies = [];
 
 function processInput() {
     const tracesInput = document.getElementById('traces-input').value;
     const yamlFile = document.getElementById('yaml-file').files[0];
-    const matrixDisplay = document.getElementById('matrix-display');
+    const dependenciesDisplay = document.getElementById('dependencies-display');
 
-    matrixDisplay.innerHTML = '<div class="alert alert-info"><span class="loading"></span> Processing...</div>';
+    dependenciesDisplay.innerHTML = '<div class="alert alert-info"><span class="loading"></span> Processing...</div>';
 
     let fetchOptions;
 
@@ -32,7 +32,7 @@ function processInput() {
             body: JSON.stringify({ traces: traces })
         };
     } else {
-        matrixDisplay.innerHTML = '<div class="alert alert-warning">Please provide traces or upload a YAML file.</div>';
+        dependenciesDisplay.innerHTML = '<div class="alert alert-warning">Please provide traces or upload a YAML file.</div>';
         return;
     }
 
@@ -40,98 +40,183 @@ function processInput() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                fetchAndDisplayMatrix();
+                fetchAndDisplayDependencies();
             } else {
-                matrixDisplay.innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
+                dependenciesDisplay.innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            matrixDisplay.innerHTML = '<div class="alert alert-danger">An unexpected error occurred.</div>';
+            dependenciesDisplay.innerHTML = '<div class="alert alert-danger">An unexpected error occurred.</div>';
         });
 }
 
-function fetchAndDisplayMatrix() {
-    const matrixDisplay = document.getElementById('matrix-display');
-    matrixDisplay.innerHTML = '<div class="alert alert-info"><span class="loading"></span> Fetching matrix...</div>';
+function fetchAndDisplayDependencies() {
+    const dependenciesDisplay = document.getElementById('dependencies-display');
+    dependenciesDisplay.innerHTML = '<div class="alert alert-info"><span class="loading"></span> Analyzing dependencies...</div>';
 
     fetch('/api/matrix')
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                originalMatrixData = data;
-                modifiedMatrixData = null; // Clear any previous modified matrix
+                originalDependenciesData = data;
+                modifiedDependenciesData = null; // Clear any previous modified dependencies
                 
-                displayMatrix(data, 'matrix-display');
-                displayMatrix(data, 'original-matrix-display');
-                document.getElementById('modified-matrix-display').innerHTML = '<div class="alert alert-info">The result of the operation will be displayed here.</div>';
+                displayDependencies(data, 'dependencies-display');
+                displayDependencies(data, 'original-dependencies-display');
+                document.getElementById('modified-dependencies-display').innerHTML = '<div class="alert alert-info">The result of the operation will be displayed here.</div>';
                 
-                // Reset matrix source selection to "original" and disable "modified" option
-                const matrixSourceSelect = document.getElementById('matrix-source-select');
-                matrixSourceSelect.value = 'original';
-                const modifiedOption = document.querySelector('#matrix-source-select option[value="modified"]');
+                // Reset dependencies source selection to "original" and disable "modified" option
+                const dependenciesSourceSelect = document.getElementById('dependencies-source-select');
+                dependenciesSourceSelect.value = 'original';
+                const modifiedOption = document.querySelector('#dependencies-source-select option[value="modified"]');
                 modifiedOption.disabled = true;
-                modifiedOption.textContent = 'Modified Matrix';
-                updateMatrixSourceTitle();
+                modifiedOption.textContent = 'Modified Dependencies';
+                updateDependenciesSourceTitle();
                 populateLockSelections(data.activities);
             } else {
-                document.getElementById('matrix-display').innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
+                document.getElementById('dependencies-display').innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            document.getElementById('matrix-display').innerHTML = '<div class="alert alert-danger">Failed to fetch the matrix.</div>';
+            document.getElementById('dependencies-display').innerHTML = '<div class="alert alert-danger">Failed to analyze dependencies.</div>';
         });
 }
 
-function displayMatrix(data, elementId) {
-    const matrixDisplay = document.getElementById(elementId);
+function displayDependencies(data, elementId) {
+    const dependenciesDisplay = document.getElementById(elementId);
     const activities = data.activities;
     const matrix = data.matrix;
     const cellClasses = data.cell_classes || {};
 
-    let tableHtml = '<table class="matrix-table"><tr><th></th>';
+    let dependenciesHtml = '<div class="dependencies-overview">';
+    dependenciesHtml += '<h4>Activity Dependencies</h4>';
+    dependenciesHtml += '<div class="dependencies-explanation">Below you can see how activities depend on each other in your process:</div>';
     
+    // Create a more user-friendly dependency list
+    let hasAnyDependencies = false;
+    let dependencyList = '<div class="dependency-list">';
+    
+    activities.forEach(fromActivity => {
+        activities.forEach(toActivity => {
+            if (fromActivity !== toActivity && matrix[fromActivity] && matrix[fromActivity][toActivity]) {
+                const cellContent = matrix[fromActivity][toActivity];
+                if (cellContent && cellContent !== '' && cellContent !== '-,-') {
+                    hasAnyDependencies = true;
+                    
+                    let dependencyHtml = '<div class="dependency-item">';
+                    dependencyHtml += `<div class="dependency-pair"><strong>${fromActivity}</strong> → <strong>${toActivity}</strong></div>`;
+                    
+                    // Parse the dependency notation and create user-friendly explanations
+                    const explanation = parseDependencyExplanation(cellContent, fromActivity, toActivity);
+                    dependencyHtml += `<div class="dependency-explanation">${explanation}</div>`;
+                    
+                    // Add diff classes if this is a comparison view
+                    let itemClass = '';
+                    if (data.diff_info) {
+                        if (data.diff_info.added_cells && data.diff_info.added_cells.some(cell => cell[0] === fromActivity && cell[1] === toActivity)) {
+                            itemClass = 'diff-added';
+                        } else if (data.diff_info.removed_cells && data.diff_info.removed_cells.some(cell => cell[0] === fromActivity && cell[1] === toActivity)) {
+                            itemClass = 'diff-removed';
+                        } else if (data.diff_info.modified_cells && data.diff_info.modified_cells.some(cell => cell[0] === fromActivity && cell[1] === toActivity)) {
+                            itemClass = 'diff-modified';
+                        }
+                    }
+                    
+                    dependencyHtml += `</div>`;
+                    dependencyList += `<div class="dependency-card ${itemClass}">${dependencyHtml}</div>`;
+                }
+            }
+        });
+    });
+    
+    dependencyList += '</div>';
+    
+    if (!hasAnyDependencies) {
+        dependenciesHtml += '<div class="alert alert-info">No specific dependencies found. All activities can be executed in any order.</div>';
+    } else {
+        dependenciesHtml += dependencyList;
+    }
+    
+    // Add activities list
+    dependenciesHtml += '<div class="activities-summary">';
+    dependenciesHtml += '<h5>Activities in your process:</h5>';
+    dependenciesHtml += '<div class="activities-list">';
     activities.forEach(activity => {
-        let headerClass = '';
+        let activityClass = '';
         if (data.diff_info) {
             if (data.diff_info.added_activities && data.diff_info.added_activities.includes(activity)) {
-                headerClass = 'diff-added-activity';
+                activityClass = 'diff-added-activity';
             } else if (data.diff_info.removed_activities && data.diff_info.removed_activities.includes(activity)) {
-                headerClass = 'diff-removed-activity';
+                activityClass = 'diff-removed-activity';
             }
         }
-        tableHtml += `<th class="${headerClass}">${activity}</th>`;
+        dependenciesHtml += `<span class="activity-tag ${activityClass}">${activity}</span>`;
     });
-    tableHtml += '</tr>';
-
-    activities.forEach(fromActivity => {
-        let rowHeaderClass = '';
-        if (data.diff_info) {
-            if (data.diff_info.added_activities && data.diff_info.added_activities.includes(fromActivity)) {
-                rowHeaderClass = 'diff-added-activity';
-            } else if (data.diff_info.removed_activities && data.diff_info.removed_activities.includes(fromActivity)) {
-                rowHeaderClass = 'diff-removed-activity';
-            }
-        }
-        tableHtml += `<tr><th class="${rowHeaderClass}">${fromActivity}</th>`;
-        
-        activities.forEach(toActivity => {
-            const cellClass = cellClasses[fromActivity] ? cellClasses[fromActivity][toActivity] || '' : '';
-            tableHtml += `<td class="${cellClass}">${matrix[fromActivity][toActivity] || ''}</td>`;
-        });
-        tableHtml += '</tr>';
-    });
-
-    tableHtml += '</table>';
+    dependenciesHtml += '</div></div>';
     
+    dependenciesHtml += '</div>';
+    
+    // Add legend if this is a diff view
     if (data.diff_info && (data.diff_info.added_activities.length > 0 || 
                           data.diff_info.removed_activities.length > 0 || 
                           data.diff_info.modified_cells.length > 0)) {
-        tableHtml += createDiffLegend(data.diff_info);
+        dependenciesHtml += createDiffLegend(data.diff_info);
     }
     
-    matrixDisplay.innerHTML = tableHtml;
+    dependenciesDisplay.innerHTML = dependenciesHtml;
+}
+
+function parseDependencyExplanation(cellContent, fromActivity, toActivity) {
+    // Parse the matrix notation and convert to user-friendly explanations
+    const parts = cellContent.split(',');
+    const temporalPart = parts[0] || '-';
+    const existentialPart = parts[1] || '-';
+    
+    let explanations = [];
+    
+    // Temporal dependency explanation
+    if (temporalPart !== '-') {
+        if (temporalPart.includes('≺')) {
+            if (temporalPart.includes('d')) {
+                explanations.push(`<span class="temporal-dep">Timing: <strong>${fromActivity}</strong> must happen directly before <strong>${toActivity}</strong></span>`);
+            } else {
+                explanations.push(`<span class="temporal-dep">Timing: <strong>${fromActivity}</strong> must happen before <strong>${toActivity}</strong></span>`);
+            }
+        } else if (temporalPart.includes('≻')) {
+            if (temporalPart.includes('d')) {
+                explanations.push(`<span class="temporal-dep">Timing: <strong>${toActivity}</strong> must happen directly before <strong>${fromActivity}</strong></span>`);
+            } else {
+                explanations.push(`<span class="temporal-dep">Timing: <strong>${toActivity}</strong> must happen before <strong>${fromActivity}</strong></span>`);
+            }
+        }
+    }
+    
+    // Existential dependency explanation  
+    if (existentialPart !== '-') {
+        if (existentialPart === '=>') {
+            explanations.push(`<span class="existential-dep">Occurrence: If <strong>${fromActivity}</strong> happens, then <strong>${toActivity}</strong> must also happen</span>`);
+        } else if (existentialPart === '<=') {
+            explanations.push(`<span class="existential-dep">Occurrence: If <strong>${toActivity}</strong> happens, then <strong>${fromActivity}</strong> must also happen</span>`);
+        } else if (existentialPart === '⇔') {
+            explanations.push(`<span class="existential-dep">Occurrence: <strong>${fromActivity}</strong> and <strong>${toActivity}</strong> must both happen or both not happen</span>`);
+        } else if (existentialPart === '⇎') {
+            explanations.push(`<span class="existential-dep">Occurrence: Either <strong>${fromActivity}</strong> or <strong>${toActivity}</strong> can happen, but not both</span>`);
+        } else if (existentialPart === '∧') {
+            explanations.push(`<span class="existential-dep">Occurrence: Both <strong>${fromActivity}</strong> and <strong>${toActivity}</strong> must happen together</span>`);
+        } else if (existentialPart === '⊼') {
+            explanations.push(`<span class="existential-dep">Occurrence: <strong>${fromActivity}</strong> and <strong>${toActivity}</strong> cannot both happen</span>`);
+        } else if (existentialPart === '∨') {
+            explanations.push(`<span class="existential-dep">Occurrence: At least one of <strong>${fromActivity}</strong> or <strong>${toActivity}</strong> must happen</span>`);
+        }
+    }
+    
+    if (explanations.length === 0) {
+        return `<span class="no-dep">No specific dependency constraint between these activities</span>`;
+    }
+    
+    return explanations.join('<br>');
 }
 
 function createDiffLegend(diffInfo) {
@@ -226,7 +311,7 @@ function updateOperationInputs() {
                     <input type="text" id="collapsed_activity" class="form-control">
                 </div>
                 <div class="form-group">
-                    <label class="form-label" for="collapsed_matrix_file">Collapsed Matrix (YAML):</label>
+                    <label class="form-label" for="collapsed_dependencies_file">Collapsed Dependencies (YAML):</label>
                     <input type="file" id="collapsed_matrix_file" class="form-control" accept=".yaml,.yml">
                 </div>`;
             break;
@@ -535,10 +620,10 @@ function renderLocksList() {
 
 function performChangeOperation() {
     const operation = document.getElementById('change-operation-select').value;
-    const matrixSource = document.getElementById('matrix-source-select').value;
+    const dependenciesSource = document.getElementById('dependencies-source-select').value;
     const formData = new FormData();
     formData.append('operation', operation);
-    formData.append('matrix_source', matrixSource);
+    formData.append('matrix_source', dependenciesSource);
     // Append locks
     formData.append('locks', JSON.stringify(lockedDependencies));
 
@@ -637,13 +722,13 @@ function performChangeOperation() {
             break;
     }
 
-    const originalMatrixDisplay = document.getElementById('original-matrix-display');
-    const modifiedMatrixDisplay = document.getElementById('modified-matrix-display');
+    const originalDependenciesDisplay = document.getElementById('original-dependencies-display');
+    const modifiedDependenciesDisplay = document.getElementById('modified-dependencies-display');
     
     document.getElementById('export-button').style.display = 'none';
     
-    originalMatrixDisplay.innerHTML = '<div class="alert alert-info"><span class="loading"></span> Performing operation...</div>';
-    modifiedMatrixDisplay.innerHTML = '<div class="alert alert-info"><span class="loading"></span> Performing operation...</div>';
+    originalDependenciesDisplay.innerHTML = '<div class="alert alert-info"><span class="loading"></span> Performing operation...</div>';
+    modifiedDependenciesDisplay.innerHTML = '<div class="alert alert-info"><span class="loading"></span> Performing operation...</div>';
 
     fetch('/api/change', {
         method: 'POST',
@@ -652,39 +737,39 @@ function performChangeOperation() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            modifiedMatrixData = data.modified;
+            modifiedDependenciesData = data.modified;
             
-            displayMatrix(data.original, 'original-matrix-display');
-            displayMatrix(data.modified, 'modified-matrix-display');
+            displayDependencies(data.original, 'original-dependencies-display');
+            displayDependencies(data.modified, 'modified-dependencies-display');
             console.log('Diff Info:', data.diff_info);
             
-            const modifiedOption = document.querySelector('#matrix-source-select option[value="modified"]');
+            const modifiedOption = document.querySelector('#dependencies-source-select option[value="modified"]');
             modifiedOption.disabled = false;
-            modifiedOption.textContent = 'Modified Matrix (Available)';
+            modifiedOption.textContent = 'Modified Dependencies (Available)';
             
-            // Update the source matrix display if "modified" is currently selected
-            const matrixSource = document.getElementById('matrix-source-select').value;
-            if (matrixSource === 'modified') {
-                updateSourceMatrixDisplay('modified');
+            // Update the source dependencies display if "modified" is currently selected
+            const dependenciesSource = document.getElementById('dependencies-source-select').value;
+            if (dependenciesSource === 'modified') {
+                updateSourceDependenciesDisplay('modified');
             }
             
             document.getElementById('export-button').style.display = 'inline-block';
         } else {
-            originalMatrixDisplay.innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
-            modifiedMatrixDisplay.innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
+            originalDependenciesDisplay.innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
+            modifiedDependenciesDisplay.innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
             document.getElementById('export-button').style.display = 'none';
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        originalMatrixDisplay.innerHTML = '<div class="alert alert-danger">An unexpected error occurred.</div>';
-        modifiedMatrixDisplay.innerHTML = '<div class="alert alert-danger">An unexpected error occurred.</div>';
+        originalDependenciesDisplay.innerHTML = '<div class="alert alert-danger">An unexpected error occurred.</div>';
+        modifiedDependenciesDisplay.innerHTML = '<div class="alert alert-danger">An unexpected error occurred.</div>';
         // Hide export button on error
         document.getElementById('export-button').style.display = 'none';
     });
 }
 
-function exportModifiedMatrix() {
+function exportModifiedDependencies() {
     fetch('/api/export')
         .then(response => response.json())
         .then(data => {
@@ -706,56 +791,56 @@ function exportModifiedMatrix() {
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('An error occurred while exporting the matrix.');
+            alert('An error occurred while exporting the dependencies.');
         });
 }
 
-function updateMatrixSourceTitle() {
-    const matrixSource = document.getElementById('matrix-source-select').value;
-    const titleElement = document.getElementById('source-matrix-title');
-    const modifiedOption = document.querySelector('#matrix-source-select option[value="modified"]');
+function updateDependenciesSourceTitle() {
+    const dependenciesSource = document.getElementById('dependencies-source-select').value;
+    const titleElement = document.getElementById('source-dependencies-title');
+    const modifiedOption = document.querySelector('#dependencies-source-select option[value="modified"]');
     
-    if (matrixSource === 'modified') {
-        titleElement.textContent = 'Modified Matrix (Source)';
+    if (dependenciesSource === 'modified') {
+        titleElement.textContent = 'Modified Dependencies (Source)';
         if (modifiedOption.disabled) {
             // If modified option is disabled, reset to original
-            document.getElementById('matrix-source-select').value = 'original';
-            titleElement.textContent = 'Initial Matrix (Source)';
-            showMatrixSourceStatus('original');
-            updateSourceMatrixDisplay('original');
+            document.getElementById('dependencies-source-select').value = 'original';
+            titleElement.textContent = 'Initial Dependencies (Source)';
+            showDependenciesSourceStatus('original');
+            updateSourceDependenciesDisplay('original');
         } else {
-            showMatrixSourceStatus('modified');
-            updateSourceMatrixDisplay('modified');
+            showDependenciesSourceStatus('modified');
+            updateSourceDependenciesDisplay('modified');
         }
     } else {
-        titleElement.textContent = 'Initial Matrix (Source)';
-        showMatrixSourceStatus('original');
-        updateSourceMatrixDisplay('original');
+        titleElement.textContent = 'Initial Dependencies (Source)';
+        showDependenciesSourceStatus('original');
+        updateSourceDependenciesDisplay('original');
     }
 }
 
-function updateSourceMatrixDisplay(matrixSource) {
-    const sourceDisplay = document.getElementById('original-matrix-display');
+function updateSourceDependenciesDisplay(dependenciesSource) {
+    const sourceDisplay = document.getElementById('original-dependencies-display');
     
-    if (matrixSource === 'modified' && modifiedMatrixData) {
-        displayMatrix(modifiedMatrixData, 'original-matrix-display');
-    } else if (matrixSource === 'original' && originalMatrixData) {
-        displayMatrix(originalMatrixData, 'original-matrix-display');
+    if (dependenciesSource === 'modified' && modifiedDependenciesData) {
+        displayDependencies(modifiedDependenciesData, 'original-dependencies-display');
+    } else if (dependenciesSource === 'original' && originalDependenciesData) {
+        displayDependencies(originalDependenciesData, 'original-dependencies-display');
     } else {
-        sourceDisplay.innerHTML = '<div class="alert alert-info">Generate a matrix first to perform operations on it.</div>';
+        sourceDisplay.innerHTML = '<div class="alert alert-info">Analyze dependencies first to perform operations on them.</div>';
     }
 }
 
-function showMatrixSourceStatus(matrixSource) {
+function showDependenciesSourceStatus(dependenciesSource) {
     const statusMessages = {
-        'original': 'Using Initial Matrix as source for operation',
-        'modified': 'Using Modified Matrix as source for operation'
+        'original': 'Using Initial Dependencies as source for operation',
+        'modified': 'Using Modified Dependencies as source for operation'
     };
     
-    let statusElement = document.getElementById('matrix-source-status');
+    let statusElement = document.getElementById('dependencies-source-status');
     if (!statusElement) {
         statusElement = document.createElement('div');
-        statusElement.id = 'matrix-source-status';
+        statusElement.id = 'dependencies-source-status';
         statusElement.className = 'alert alert-info';
         statusElement.style.marginTop = '10px';
         statusElement.style.fontSize = '0.9em';
@@ -768,33 +853,33 @@ function showMatrixSourceStatus(matrixSource) {
         }
     }
     
-    statusElement.textContent = statusMessages[matrixSource] || '';
-    statusElement.style.display = matrixSource ? 'block' : 'none';
+    statusElement.textContent = statusMessages[dependenciesSource] || '';
+    statusElement.style.display = dependenciesSource ? 'block' : 'none';
 }
 
-function updateSourceMatrixDisplay(matrixSource) {
-    const originalMatrixDisplay = document.getElementById('original-matrix-display');
-    const modifiedMatrixDisplay = document.getElementById('modified-matrix-display');
+function updateSourceDependenciesDisplayAlt(dependenciesSource) {
+    const originalDependenciesDisplay = document.getElementById('original-dependencies-display');
+    const modifiedDependenciesDisplay = document.getElementById('modified-dependencies-display');
     
-    if (matrixSource === 'original' && originalMatrixData) {
-        displayMatrix(originalMatrixData, 'original-matrix-display');
-    } else if (matrixSource === 'modified' && modifiedMatrixData) {
-        displayMatrix(modifiedMatrixData, 'modified-matrix-display');
+    if (dependenciesSource === 'original' && originalDependenciesData) {
+        displayDependencies(originalDependenciesData, 'original-dependencies-display');
+    } else if (dependenciesSource === 'modified' && modifiedDependenciesData) {
+        displayDependencies(modifiedDependenciesData, 'modified-dependencies-display');
     }
 }
 
 // Initialize page
 document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('change-operation-select').addEventListener('change', updateOperationInputs);
-    document.getElementById('matrix-source-select').addEventListener('change', () => {
-        updateMatrixSourceTitle();
-        showMatrixSourceStatus(document.getElementById('matrix-source-select').value);
+    document.getElementById('dependencies-source-select').addEventListener('change', () => {
+        updateDependenciesSourceTitle();
+        showDependenciesSourceStatus(document.getElementById('dependencies-source-select').value);
     });
     
-    // Initialize the "Modified Matrix" option as disabled
-    const modifiedOption = document.querySelector('#matrix-source-select option[value="modified"]');
+    // Initialize the "Modified Dependencies" option as disabled
+    const modifiedOption = document.querySelector('#dependencies-source-select option[value="modified"]');
     modifiedOption.disabled = true;
-    updateMatrixSourceTitle();
+    updateDependenciesSourceTitle();
     
     console.log('Business Process Redesign Tool initialized');
 });

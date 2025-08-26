@@ -213,6 +213,134 @@ body {
     font-family: 'Courier New', monospace;
 }
 
+/* Dependency display styles */
+.dependencies-display {
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    padding: 1rem;
+    min-height: 200px;
+    overflow: auto;
+    border: 1px solid var(--border-color);
+}
+
+.dependencies-overview h4 {
+    color: var(--accent-secondary);
+    margin-bottom: 0.5rem;
+    font-size: 1.2rem;
+}
+
+.dependencies-explanation {
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+    font-style: italic;
+}
+
+.dependency-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.dependency-card {
+    background: var(--bg-tertiary);
+    border-radius: 6px;
+    padding: 1rem;
+    border-left: 4px solid var(--accent-primary);
+    transition: all 0.3s ease;
+}
+
+.dependency-card:hover {
+    background: #525a63;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    transform: translateY(-1px);
+}
+
+.dependency-pair {
+    font-weight: bold;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+}
+
+.dependency-pair strong {
+    color: var(--accent-secondary);
+}
+
+.dependency-explanation {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.temporal-dep {
+    color: #64A0C8;
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.existential-dep {
+    color: #A2AD00;
+    display: block;
+}
+
+.no-dep {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.activities-summary {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.activities-summary h5 {
+    color: var(--text-primary);
+    margin-bottom: 0.75rem;
+}
+
+.activities-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.activity-tag {
+    background: var(--accent-primary);
+    color: var(--text-primary);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    display: inline-block;
+}
+
+.activity-tag.diff-added-activity {
+    background: var(--success-color);
+}
+
+.activity-tag.diff-removed-activity {
+    background: var(--danger-color);
+    text-decoration: line-through;
+}
+
+.dependency-card.diff-added {
+    border-left-color: var(--success-color);
+    background: #2d4a2d;
+}
+
+.dependency-card.diff-removed {
+    border-left-color: var(--danger-color);
+    background: #4a2d2d;
+    opacity: 0.7;
+}
+
+.dependency-card.diff-modified {
+    border-left-color: var(--warning-color);
+    background: #4a5d2d;
+}
+
+/* Matrix display styles (keeping for backward compatibility) */
 .matrix-display {
     background: var(--bg-primary);
     border-radius: 8px;

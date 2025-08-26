@@ -5,12 +5,12 @@
 {% block content %}
 <!-- Tab Navigation -->
 <div class="tabs">
-    <button class="tab active">Adjacency Matrix</button>
+    <button class="tab active">Process Dependency Analysis</button>
 </div>
 
-<div id="adjacency-matrix" class="tab-content active">
+<div id="dependency-analysis" class="tab-content active">
     <div class="container">
-        <h2 class="section-title">Adjacency Matrix</h2>
+        <h2 class="section-title">Process Dependency Analysis</h2>
         
         <div class="grid grid-2">
             <div class="card">
@@ -21,20 +21,20 @@
                 </div>
                 
                 <div class="form-group">
-                    <label class="form-label">Or upload an Adjacency Matrix in YAML format:</label>
+                    <label class="form-label">Or upload process dependencies in YAML format:</label>
                     <input type="file" class="form-control" id="yaml-file" accept=".yaml,.yml">
                 </div>
                 
                 <div class="btn-group">
-                    <button class="btn btn-primary" onclick="processInput()">Generate Matrix</button>
+                    <button class="btn btn-primary" onclick="processInput()">Analyze Dependencies</button>
                 </div>
             </div>
             
             <div class="card">
-                <h3 class="card-title">Matrix Display</h3>
-                <div class="matrix-display" id="matrix-display">
+                <h3 class="card-title">Dependencies Overview</h3>
+                <div class="dependencies-display" id="dependencies-display">
                     <div class="alert alert-info">
-                        Provide traces or upload a file to generate the matrix.
+                        Provide traces or upload a file to analyze dependencies.
                     </div>
                 </div>
                 <div id="lock-dependencies" class="form-group" style="margin-top: 20px;">
@@ -61,15 +61,15 @@
 
 <div id="change-operations" class="tab-content active" style="margin-top: 20px;">
     <div class="container">
-        <h2 class="section-title">Change Operations</h2>
+        <h2 class="section-title">Process Redesign Operations</h2>
         <div class="grid grid-2">
             <div class="card">
                 <h3 class="card-title">Operation Configuration</h3>
                 <div class="form-group">
-                    <label class="form-label" for="matrix-source-select">Apply Operation To:</label>
-                    <select id="matrix-source-select" class="form-control">
-                        <option value="original">Initial Matrix</option>
-                        <option value="modified">Modified Matrix</option>
+                    <label class="form-label" for="dependencies-source-select">Apply Operation To:</label>
+                    <select id="dependencies-source-select" class="form-control">
+                        <option value="original">Initial Dependencies</option>
+                        <option value="modified">Modified Dependencies</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -95,25 +95,25 @@
                 </div>
             </div>
             <div class="card">
-                <h3 class="card-title" id="source-matrix-title">Source Matrix</h3>
-                <div class="matrix-display" id="original-matrix-display">
+                <h3 class="card-title" id="source-dependencies-title">Source Dependencies</h3>
+                <div class="dependencies-display" id="original-dependencies-display">
                     <div class="alert alert-info">
-                        Generate a matrix first to perform operations on it.
+                        Analyze dependencies first to perform operations on them.
                     </div>
                 </div>
             </div>
         </div>
         <div class="grid grid-1" style="margin-top: 20px;">
             <div class="card">
-                <h3 class="card-title">Modified Matrix</h3>
-                <div class="matrix-display" id="modified-matrix-display">
+                <h3 class="card-title">Modified Dependencies</h3>
+                <div class="dependencies-display" id="modified-dependencies-display">
                     <div class="alert alert-info">
                         The result of the operation will be displayed here.
                     </div>
                 </div>
                 <div class="btn-group" style="margin-top: 1rem;">
-                    <button class="btn btn-secondary" onclick="exportModifiedMatrix()" id="export-button" style="display: none;">
-                        Export Modified Matrix (YAML)
+                    <button class="btn btn-secondary" onclick="exportModifiedDependencies()" id="export-button" style="display: none;">
+                        Export Modified Dependencies (YAML)
                     </button>
                 </div>
             </div>
