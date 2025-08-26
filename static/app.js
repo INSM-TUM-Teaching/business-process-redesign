@@ -180,15 +180,15 @@ function parseDependencyExplanation(cellContent, fromActivity, toActivity) {
     if (temporalPart !== '-') {
         if (temporalPart.includes('≺')) {
             if (temporalPart.includes('d')) {
-                explanations.push(`<span class="temporal-dep">Timing: <strong>${fromActivity}</strong> must happen directly before <strong>${toActivity}</strong></span>`);
+                explanations.push(`<span class="temporal-dep" title="This means ${fromActivity} must happen immediately before ${toActivity} with no other activities in between">Timing: <strong>${fromActivity}</strong> must happen directly before <strong>${toActivity}</strong></span>`);
             } else {
-                explanations.push(`<span class="temporal-dep">Timing: <strong>${fromActivity}</strong> must happen before <strong>${toActivity}</strong></span>`);
+                explanations.push(`<span class="temporal-dep" title="This means ${fromActivity} must happen before ${toActivity}, but other activities can happen in between">Timing: <strong>${fromActivity}</strong> must happen before <strong>${toActivity}</strong></span>`);
             }
         } else if (temporalPart.includes('≻')) {
             if (temporalPart.includes('d')) {
-                explanations.push(`<span class="temporal-dep">Timing: <strong>${toActivity}</strong> must happen directly before <strong>${fromActivity}</strong></span>`);
+                explanations.push(`<span class="temporal-dep" title="This means ${toActivity} must happen immediately before ${fromActivity} with no other activities in between">Timing: <strong>${toActivity}</strong> must happen directly before <strong>${fromActivity}</strong></span>`);
             } else {
-                explanations.push(`<span class="temporal-dep">Timing: <strong>${toActivity}</strong> must happen before <strong>${fromActivity}</strong></span>`);
+                explanations.push(`<span class="temporal-dep" title="This means ${toActivity} must happen before ${fromActivity}, but other activities can happen in between">Timing: <strong>${toActivity}</strong> must happen before <strong>${fromActivity}</strong></span>`);
             }
         }
     }
@@ -196,24 +196,24 @@ function parseDependencyExplanation(cellContent, fromActivity, toActivity) {
     // Existential dependency explanation  
     if (existentialPart !== '-') {
         if (existentialPart === '=>') {
-            explanations.push(`<span class="existential-dep">Occurrence: If <strong>${fromActivity}</strong> happens, then <strong>${toActivity}</strong> must also happen</span>`);
+            explanations.push(`<span class="existential-dep" title="If ${fromActivity} occurs in a process instance, then ${toActivity} must also occur in that same instance">Occurrence: If <strong>${fromActivity}</strong> happens, then <strong>${toActivity}</strong> must also happen</span>`);
         } else if (existentialPart === '<=') {
-            explanations.push(`<span class="existential-dep">Occurrence: If <strong>${toActivity}</strong> happens, then <strong>${fromActivity}</strong> must also happen</span>`);
+            explanations.push(`<span class="existential-dep" title="If ${toActivity} occurs in a process instance, then ${fromActivity} must also occur in that same instance">Occurrence: If <strong>${toActivity}</strong> happens, then <strong>${fromActivity}</strong> must also happen</span>`);
         } else if (existentialPart === '⇔') {
-            explanations.push(`<span class="existential-dep">Occurrence: <strong>${fromActivity}</strong> and <strong>${toActivity}</strong> must both happen or both not happen</span>`);
+            explanations.push(`<span class="existential-dep" title="Both activities must always occur together - either both happen or neither happens in any process instance">Occurrence: <strong>${fromActivity}</strong> and <strong>${toActivity}</strong> must both happen or both not happen</span>`);
         } else if (existentialPart === '⇎') {
-            explanations.push(`<span class="existential-dep">Occurrence: Either <strong>${fromActivity}</strong> or <strong>${toActivity}</strong> can happen, but not both</span>`);
+            explanations.push(`<span class="existential-dep" title="These activities are mutually exclusive - only one can happen in any process instance">Occurrence: Either <strong>${fromActivity}</strong> or <strong>${toActivity}</strong> can happen, but not both</span>`);
         } else if (existentialPart === '∧') {
-            explanations.push(`<span class="existential-dep">Occurrence: Both <strong>${fromActivity}</strong> and <strong>${toActivity}</strong> must happen together</span>`);
+            explanations.push(`<span class="existential-dep" title="Both activities must occur together in every process instance">Occurrence: Both <strong>${fromActivity}</strong> and <strong>${toActivity}</strong> must happen together</span>`);
         } else if (existentialPart === '⊼') {
-            explanations.push(`<span class="existential-dep">Occurrence: <strong>${fromActivity}</strong> and <strong>${toActivity}</strong> cannot both happen</span>`);
+            explanations.push(`<span class="existential-dep" title="These activities cannot both occur in the same process instance">Occurrence: <strong>${fromActivity}</strong> and <strong>${toActivity}</strong> cannot both happen</span>`);
         } else if (existentialPart === '∨') {
-            explanations.push(`<span class="existential-dep">Occurrence: At least one of <strong>${fromActivity}</strong> or <strong>${toActivity}</strong> must happen</span>`);
+            explanations.push(`<span class="existential-dep" title="At least one of these activities must occur in every process instance">Occurrence: At least one of <strong>${fromActivity}</strong> or <strong>${toActivity}</strong> must happen</span>`);
         }
     }
     
     if (explanations.length === 0) {
-        return `<span class="no-dep">No specific dependency constraint between these activities</span>`;
+        return `<span class="no-dep" title="These activities have no specific dependency constraints and can occur independently">No specific dependency constraint between these activities</span>`;
     }
     
     return explanations.join('<br>');
@@ -221,12 +221,13 @@ function parseDependencyExplanation(cellContent, fromActivity, toActivity) {
 
 function createDiffLegend(diffInfo) {
     let legendHtml = '<div class="diff-legend">';
+    legendHtml += '<h5 style="color: var(--text-primary); margin-bottom: 1rem;">Changes Overview:</h5>';
     
     if (diffInfo.added_activities.length > 0) {
         legendHtml += `
             <div class="diff-legend-item">
                 <div class="diff-legend-color added-activity"></div>
-                <span>Added Activities (${diffInfo.added_activities.length})</span>
+                <span>Added Activities (${diffInfo.added_activities.length}): ${diffInfo.added_activities.join(', ')}</span>
             </div>`;
     }
     
@@ -234,15 +235,37 @@ function createDiffLegend(diffInfo) {
         legendHtml += `
             <div class="diff-legend-item">
                 <div class="diff-legend-color removed-activity"></div>
-                <span>Removed Activities (${diffInfo.removed_activities.length})</span>
+                <span>Removed Activities (${diffInfo.removed_activities.length}): ${diffInfo.removed_activities.join(', ')}</span>
             </div>`;
     }
     
-    if (diffInfo.added_cells.length > 0) {
+    if (diffInfo.added_cells && diffInfo.added_cells.length > 0) {
         legendHtml += `
             <div class="diff-legend-item">
                 <div class="diff-legend-color added"></div>
-                <span>Added Dependencies</span>
+                <span>New Dependencies (${diffInfo.added_cells.length})</span>
+            </div>`;
+    }
+    
+    if (diffInfo.removed_cells && diffInfo.removed_cells.length > 0) {
+        legendHtml += `
+            <div class="diff-legend-item">
+                <div class="diff-legend-color removed"></div>
+                <span>Removed Dependencies (${diffInfo.removed_cells.length})</span>
+            </div>`;
+    }
+    
+    if (diffInfo.modified_cells && diffInfo.modified_cells.length > 0) {
+        legendHtml += `
+            <div class="diff-legend-item">
+                <div class="diff-legend-color modified"></div>
+                <span>Modified Dependencies (${diffInfo.modified_cells.length})</span>
+            </div>`;
+    }
+    
+    legendHtml += '</div>';
+    return legendHtml;
+}
             </div>`;
     }
     
