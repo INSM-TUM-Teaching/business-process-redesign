@@ -7,9 +7,9 @@ let lockedDependencies = [];
 function processInput() {
     const tracesInput = document.getElementById('traces-input').value;
     const yamlFile = document.getElementById('yaml-file').files[0];
-    const dependenciesDisplay = document.getElementById('dependencies-display');
+    const originalDependenciesDisplay = document.getElementById('original-dependencies-display');
 
-    dependenciesDisplay.innerHTML = '<div class="alert alert-info"><span class="loading"></span> Processing...</div>';
+    originalDependenciesDisplay.innerHTML = '<div class="alert alert-info"><span class="loading"></span> Processing...</div>';
 
     let fetchOptions;
 
@@ -32,7 +32,7 @@ function processInput() {
             body: JSON.stringify({ traces: traces })
         };
     } else {
-        dependenciesDisplay.innerHTML = '<div class="alert alert-warning">Please provide traces or upload a YAML file.</div>';
+        originalDependenciesDisplay.innerHTML = '<div class="alert alert-warning">Please provide traces or upload a YAML file.</div>';
         return;
     }
 
@@ -42,18 +42,18 @@ function processInput() {
             if (data.success) {
                 fetchAndDisplayDependencies();
             } else {
-                dependenciesDisplay.innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
+                originalDependenciesDisplay.innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            dependenciesDisplay.innerHTML = '<div class="alert alert-danger">An unexpected error occurred.</div>';
+            originalDependenciesDisplay.innerHTML = '<div class="alert alert-danger">An unexpected error occurred.</div>';
         });
 }
 
 function fetchAndDisplayDependencies() {
-    const dependenciesDisplay = document.getElementById('dependencies-display');
-    dependenciesDisplay.innerHTML = '<div class="alert alert-info"><span class="loading"></span> Analyzing dependencies...</div>';
+    const originalDependenciesDisplay = document.getElementById('original-dependencies-display');
+    originalDependenciesDisplay.innerHTML = '<div class="alert alert-info"><span class="loading"></span> Analyzing dependencies...</div>';
 
     fetch('/api/matrix')
         .then(response => response.json())
@@ -62,7 +62,6 @@ function fetchAndDisplayDependencies() {
                 originalDependenciesData = data;
                 modifiedDependenciesData = null; // Clear any previous modified dependencies
                 
-                displayDependencies(data, 'dependencies-display');
                 displayDependencies(data, 'original-dependencies-display');
                 document.getElementById('modified-dependencies-display').innerHTML = '<div class="alert alert-info">The result of the operation will be displayed here.</div>';
                 
@@ -75,12 +74,12 @@ function fetchAndDisplayDependencies() {
                 updateDependenciesSourceTitle();
                 populateLockSelections(data.activities);
             } else {
-                document.getElementById('dependencies-display').innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
+                document.getElementById('original-dependencies-display').innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            document.getElementById('dependencies-display').innerHTML = '<div class="alert alert-danger">Failed to analyze dependencies.</div>';
+            document.getElementById('original-dependencies-display').innerHTML = '<div class="alert alert-danger">Failed to analyze dependencies.</div>';
         });
 }
 
@@ -166,6 +165,212 @@ function displayDependencies(data, elementId) {
     }
     
     dependenciesDisplay.innerHTML = dependenciesHtml;
+}
+
+function displayDependenciesComparison(originalData, modifiedData, elementId) {
+    const dependenciesDisplay = document.getElementById(elementId);
+    
+    let comparisonHtml = '<div class="dependencies-comparison">';
+    comparisonHtml += '<h4>Dependency Changes Overview</h4>';
+    comparisonHtml += '<div class="comparison-explanation">See what changed after the operation was performed:</div>';
+    
+    // Create before and after sections
+    comparisonHtml += '<div class="comparison-sections">';
+    
+    // Before section
+    comparisonHtml += '<div class="comparison-section before-section">';
+    comparisonHtml += '<h5 class="section-header">Before Operation</h5>';
+    comparisonHtml += '<div class="dependencies-summary">';
+    
+    // Get original dependencies
+    const originalDeps = getDependencyPairs(originalData);
+    if (originalDeps.length === 0) {
+        comparisonHtml += '<div class="no-dependencies">No specific dependencies found.</div>';
+    } else {
+        originalDeps.forEach(dep => {
+            comparisonHtml += `<div class="dependency-item-compact">${dep.from} → ${dep.to}: ${dep.explanation}</div>`;
+        });
+    }
+    
+    comparisonHtml += '</div></div>';
+    
+    // After section  
+    comparisonHtml += '<div class="comparison-section after-section">';
+    comparisonHtml += '<h5 class="section-header">After Operation</h5>';
+    comparisonHtml += '<div class="dependencies-summary">';
+    
+    // Get modified dependencies
+    const modifiedDeps = getDependencyPairs(modifiedData);
+    if (modifiedDeps.length === 0) {
+        comparisonHtml += '<div class="no-dependencies">No specific dependencies found.</div>';
+    } else {
+        modifiedDeps.forEach(dep => {
+            comparisonHtml += `<div class="dependency-item-compact">${dep.from} → ${dep.to}: ${dep.explanation}</div>`;
+        });
+    }
+    
+    comparisonHtml += '</div></div>';
+    comparisonHtml += '</div>'; // end comparison-sections
+    
+    // Add detailed changes section
+    comparisonHtml += '<div class="detailed-changes">';
+    comparisonHtml += '<h5>What Changed</h5>';
+    
+    const changes = compareDepencencies(originalData, modifiedData);
+    if (changes.length === 0) {
+        comparisonHtml += '<div class="no-changes">No dependency changes detected.</div>';
+    } else {
+        changes.forEach(change => {
+            comparisonHtml += `<div class="change-item ${change.type}">${change.description}</div>`;
+        });
+    }
+    
+    comparisonHtml += '</div>'; // end detailed-changes
+    comparisonHtml += '</div>'; // end dependencies-comparison
+    
+    dependenciesDisplay.innerHTML = comparisonHtml;
+}
+
+function getDependencyPairs(data) {
+    const dependencies = [];
+    const activities = data.activities;
+    const matrix = data.matrix;
+    
+    activities.forEach(fromActivity => {
+        activities.forEach(toActivity => {
+            if (fromActivity !== toActivity && matrix[fromActivity] && matrix[fromActivity][toActivity]) {
+                const cellContent = matrix[fromActivity][toActivity];
+                if (cellContent && cellContent !== '' && cellContent !== '-,-') {
+                    const explanation = parseDependencyExplanationCompact(cellContent, fromActivity, toActivity);
+                    dependencies.push({
+                        from: fromActivity,
+                        to: toActivity,
+                        content: cellContent,
+                        explanation: explanation
+                    });
+                }
+            }
+        });
+    });
+    
+    return dependencies;
+}
+
+function parseDependencyExplanationCompact(cellContent, fromActivity, toActivity) {
+    const parts = cellContent.split(',');
+    const temporalPart = parts[0] || '-';
+    const existentialPart = parts[1] || '-';
+    
+    let explanations = [];
+    
+    // Temporal dependency explanation (compact)
+    if (temporalPart !== '-') {
+        if (temporalPart.includes('≺')) {
+            if (temporalPart.includes('d')) {
+                explanations.push(`${fromActivity} directly before ${toActivity}`);
+            } else {
+                explanations.push(`${fromActivity} before ${toActivity}`);
+            }
+        } else if (temporalPart.includes('≻')) {
+            if (temporalPart.includes('d')) {
+                explanations.push(`${toActivity} directly before ${fromActivity}`);
+            } else {
+                explanations.push(`${toActivity} before ${fromActivity}`);
+            }
+        }
+    }
+    
+    // Existential dependency explanation (compact)
+    if (existentialPart !== '-') {
+        if (existentialPart === '=>') {
+            explanations.push(`if ${fromActivity} then ${toActivity}`);
+        } else if (existentialPart === '<=') {
+            explanations.push(`if ${toActivity} then ${fromActivity}`);
+        } else if (existentialPart === '⇔') {
+            explanations.push(`${fromActivity} and ${toActivity} together`);
+        } else if (existentialPart === '⇎') {
+            explanations.push(`${fromActivity} or ${toActivity}, not both`);
+        } else if (existentialPart === '∧') {
+            explanations.push(`${fromActivity} and ${toActivity} must occur`);
+        } else if (existentialPart === '⊼') {
+            explanations.push(`${fromActivity} and ${toActivity} cannot both occur`);
+        } else if (existentialPart === '∨') {
+            explanations.push(`${fromActivity} or ${toActivity} must occur`);
+        }
+    }
+    
+    return explanations.length > 0 ? explanations.join(', ') : 'no constraints';
+}
+
+function compareDepencencies(originalData, modifiedData) {
+    const changes = [];
+    
+    const originalDeps = getDependencyPairs(originalData);
+    const modifiedDeps = getDependencyPairs(modifiedData);
+    
+    // Find removed dependencies
+    originalDeps.forEach(originalDep => {
+        const exists = modifiedDeps.find(modifiedDep => 
+            modifiedDep.from === originalDep.from && modifiedDep.to === originalDep.to
+        );
+        if (!exists) {
+            changes.push({
+                type: 'removed',
+                description: `Removed: ${originalDep.from} → ${originalDep.to} (was: ${originalDep.explanation})`
+            });
+        }
+    });
+    
+    // Find added dependencies
+    modifiedDeps.forEach(modifiedDep => {
+        const exists = originalDeps.find(originalDep => 
+            originalDep.from === modifiedDep.from && originalDep.to === modifiedDep.to
+        );
+        if (!exists) {
+            changes.push({
+                type: 'added',
+                description: `Added: ${modifiedDep.from} → ${modifiedDep.to} (${modifiedDep.explanation})`
+            });
+        }
+    });
+    
+    // Find modified dependencies
+    originalDeps.forEach(originalDep => {
+        const modifiedDep = modifiedDeps.find(dep => 
+            dep.from === originalDep.from && dep.to === originalDep.to
+        );
+        if (modifiedDep && modifiedDep.content !== originalDep.content) {
+            changes.push({
+                type: 'modified',
+                description: `Modified: ${originalDep.from} → ${originalDep.to} (was: ${originalDep.explanation}, now: ${modifiedDep.explanation})`
+            });
+        }
+    });
+    
+    // Find removed activities
+    const originalActivities = originalData.activities;
+    const modifiedActivities = modifiedData.activities;
+    
+    originalActivities.forEach(activity => {
+        if (!modifiedActivities.includes(activity)) {
+            changes.push({
+                type: 'removed-activity',
+                description: `Activity "${activity}" was removed from the process`
+            });
+        }
+    });
+    
+    // Find added activities
+    modifiedActivities.forEach(activity => {
+        if (!originalActivities.includes(activity)) {
+            changes.push({
+                type: 'added-activity', 
+                description: `Activity "${activity}" was added to the process`
+            });
+        }
+    });
+    
+    return changes;
 }
 
 function parseDependencyExplanation(cellContent, fromActivity, toActivity) {
@@ -741,7 +946,7 @@ function performChangeOperation() {
             modifiedDependenciesData = data.modified;
             
             displayDependencies(data.original, 'original-dependencies-display');
-            displayDependencies(data.modified, 'modified-dependencies-display');
+            displayDependenciesComparison(data.original, data.modified, 'modified-dependencies-display');
             console.log('Diff Info:', data.diff_info);
             
             const modifiedOption = document.querySelector('#dependencies-source-select option[value="modified"]');
