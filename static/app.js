@@ -266,28 +266,6 @@ function createDiffLegend(diffInfo) {
     legendHtml += '</div>';
     return legendHtml;
 }
-            </div>`;
-    }
-    
-    if (diffInfo.removed_cells.length > 0) {
-        legendHtml += `
-            <div class="diff-legend-item">
-                <div class="diff-legend-color removed"></div>
-                <span>Removed Dependencies</span>
-            </div>`;
-    }
-    
-    if (diffInfo.modified_cells.length > 0) {
-        legendHtml += `
-            <div class="diff-legend-item">
-                <div class="diff-legend-color modified"></div>
-                <span>Modified Dependencies (${diffInfo.modified_cells.length})</span>
-            </div>`;
-    }
-    
-    legendHtml += '</div>';
-    return legendHtml;
-}
 
 function updateOperationInputs() {
     const operation = document.getElementById('change-operation-select').value;
