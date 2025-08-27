@@ -238,14 +238,27 @@ function displayDependenciesComparison(originalData, modifiedData, elementId) {
         comparisonHtml += '<div class="no-changes">No dependency changes detected.</div>';
     } else {
         changes.forEach(change => {
-            comparisonHtml += `<div class="change-item ${change.type}">${change.description}</div>`;
+            comparisonHtml += `<div class="change-item ${change.type}" title="${change.tooltip}">${change.description}</div>`;
         });
     }
     
     comparisonHtml += '</div>'; // end detailed-changes
+    
+    // Add visual dependency graph section
+    comparisonHtml += '<div class="dependency-graph-section">';
+    comparisonHtml += '<h5>Visual Dependency Changes</h5>';
+    comparisonHtml += '<div class="dependency-graph-container">';
+    comparisonHtml += '<div id="dependency-graph"></div>';
+    comparisonHtml += '</div>';
+    comparisonHtml += '</div>'; // end dependency-graph-section
     comparisonHtml += '</div>'; // end dependencies-comparison
     
     dependenciesDisplay.innerHTML = comparisonHtml;
+    
+    // Create the visual dependency graph after DOM is updated
+    if (changes.length > 0) {
+        createDependencyGraph(originalData, modifiedData, changes);
+    }
 }
 
 function getDependencyPairs(data) {
@@ -333,7 +346,11 @@ function compareDepencencies(originalData, modifiedData) {
         if (!exists) {
             changes.push({
                 type: 'removed',
-                description: `Removed: ${originalDep.from} → ${originalDep.to} (was: ${originalDep.explanation})`
+                description: `Removed: ${originalDep.from} → ${originalDep.to}`,
+                tooltip: `This dependency was removed. It was: ${originalDep.explanation}`,
+                from: originalDep.from,
+                to: originalDep.to,
+                details: `Was: ${originalDep.explanation}`
             });
         }
     });
@@ -346,7 +363,11 @@ function compareDepencencies(originalData, modifiedData) {
         if (!exists) {
             changes.push({
                 type: 'added',
-                description: `Added: ${modifiedDep.from} → ${modifiedDep.to} (${modifiedDep.explanation})`
+                description: `Added: ${modifiedDep.from} → ${modifiedDep.to}`,
+                tooltip: `This dependency was added: ${modifiedDep.explanation}`,
+                from: modifiedDep.from,
+                to: modifiedDep.to,
+                details: `Now: ${modifiedDep.explanation}`
             });
         }
     });
@@ -359,7 +380,11 @@ function compareDepencencies(originalData, modifiedData) {
         if (modifiedDep && modifiedDep.content !== originalDep.content) {
             changes.push({
                 type: 'modified',
-                description: `Modified: ${originalDep.from} → ${originalDep.to} (was: ${originalDep.explanation}, now: ${modifiedDep.explanation})`
+                description: `Modified: ${originalDep.from} → ${originalDep.to}`,
+                tooltip: `This dependency was changed from "${originalDep.explanation}" to "${modifiedDep.explanation}"`,
+                from: originalDep.from,
+                to: originalDep.to,
+                details: `Was: ${originalDep.explanation}, Now: ${modifiedDep.explanation}`
             });
         }
     });
@@ -372,7 +397,9 @@ function compareDepencencies(originalData, modifiedData) {
         if (!modifiedActivities.includes(activity)) {
             changes.push({
                 type: 'removed-activity',
-                description: `Activity "${activity}" was removed from the process`
+                description: `Activity "${activity}" removed`,
+                tooltip: `Activity "${activity}" was removed from the process`,
+                activity: activity
             });
         }
     });
@@ -382,7 +409,9 @@ function compareDepencencies(originalData, modifiedData) {
         if (!originalActivities.includes(activity)) {
             changes.push({
                 type: 'added-activity', 
-                description: `Activity "${activity}" was added to the process`
+                description: `Activity "${activity}" added`,
+                tooltip: `Activity "${activity}" was added to the process`,
+                activity: activity
             });
         }
     });
@@ -1007,6 +1036,270 @@ function exportModifiedDependencies() {
         });
 }
 
+
+function createDependencyGraph(originalData, modifiedData, changes) {
+    const graphContainer = document.getElementById('dependency-graph');
+    if (!graphContainer) return;
+    
+    // Get all unique activities from both datasets
+    const allActivities = [...new Set([...originalData.activities, ...modifiedData.activities])];
+    
+    // Calculate graph dimensions
+    const containerWidth = graphContainer.offsetWidth || 800;
+    const containerHeight = Math.max(400, allActivities.length * 60);
+    const nodeRadius = 25;
+    const padding = 50;
+    
+    // Clear previous content
+    graphContainer.innerHTML = '';
+    
+    // Create SVG
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width', containerWidth);
+    svg.setAttribute('height', containerHeight);
+    svg.setAttribute('viewBox', `0 0 ${containerWidth} ${containerHeight}`);
+    svg.style.background = 'var(--bg-primary)';
+    svg.style.borderRadius = '8px';
+    svg.style.border = '1px solid var(--border-color)';
+    
+    // Calculate node positions in a circular layout
+    const centerX = containerWidth / 2;
+    const centerY = containerHeight / 2;
+    const radius = Math.min(centerX, centerY) - padding - nodeRadius;
+    
+    const nodePositions = {};
+    allActivities.forEach((activity, index) => {
+        const angle = (2 * Math.PI * index) / allActivities.length;
+        nodePositions[activity] = {
+            x: centerX + radius * Math.cos(angle),
+            y: centerY + radius * Math.sin(angle)
+        };
+    });
+    
+    // Create edges first (so they appear behind nodes)
+    const edgeElements = [];
+    
+    // Get all dependencies from both original and modified data
+    const originalDeps = getDependencyPairs(originalData);
+    const modifiedDeps = getDependencyPairs(modifiedData);
+    
+    // Create a map to track edge types
+    const edgeMap = new Map();
+    
+    // Process original dependencies
+    originalDeps.forEach(dep => {
+        const key = `${dep.from}->${dep.to}`;
+        edgeMap.set(key, {
+            from: dep.from,
+            to: dep.to,
+            originalExplanation: dep.explanation,
+            type: 'existing'
+        });
+    });
+    
+    // Process modified dependencies
+    modifiedDeps.forEach(dep => {
+        const key = `${dep.from}->${dep.to}`;
+        if (edgeMap.has(key)) {
+            const existing = edgeMap.get(key);
+            existing.modifiedExplanation = dep.explanation;
+            existing.type = existing.originalExplanation === dep.explanation ? 'existing' : 'modified';
+        } else {
+            edgeMap.set(key, {
+                from: dep.from,
+                to: dep.to,
+                modifiedExplanation: dep.explanation,
+                type: 'added'
+            });
+        }
+    });
+    
+    // Mark removed dependencies
+    originalDeps.forEach(dep => {
+        const key = `${dep.from}->${dep.to}`;
+        const edge = edgeMap.get(key);
+        if (edge && !edge.modifiedExplanation) {
+            edge.type = 'removed';
+        }
+    });
+    
+    // Create edges
+    edgeMap.forEach((edge, key) => {
+        const fromPos = nodePositions[edge.from];
+        const toPos = nodePositions[edge.to];
+        
+        if (!fromPos || !toPos) return;
+        
+        // Calculate edge positions (from edge of circles, not centers)
+        const dx = toPos.x - fromPos.x;
+        const dy = toPos.y - fromPos.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const unitX = dx / distance;
+        const unitY = dy / distance;
+        
+        const startX = fromPos.x + unitX * nodeRadius;
+        const startY = fromPos.y + unitY * nodeRadius;
+        const endX = toPos.x - unitX * (nodeRadius + 10); // Leave space for arrowhead
+        const endY = toPos.y - unitY * (nodeRadius + 10);
+        
+        // Create line element
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', startX);
+        line.setAttribute('y1', startY);
+        line.setAttribute('x2', endX);
+        line.setAttribute('y2', endY);
+        line.setAttribute('stroke-width', '3');
+        line.setAttribute('marker-end', `url(#arrowhead-${edge.type})`);
+        line.classList.add('dependency-edge', `edge-${edge.type}`);
+        
+        // Set color based on change type
+        let strokeColor;
+        switch (edge.type) {
+            case 'added':
+                strokeColor = '#A2AD00'; // TUM Green
+                break;
+            case 'removed':
+                strokeColor = '#FF6B35'; // Orange
+                break;
+            case 'modified':
+                strokeColor = '#FFDC00'; // TUM Yellow
+                break;
+            default:
+                strokeColor = '#6A757E'; // Muted grey for existing
+        }
+        line.setAttribute('stroke', strokeColor);
+        
+        // Add hover tooltip
+        let tooltipText = '';
+        switch (edge.type) {
+            case 'added':
+                tooltipText = `Added: ${edge.from} → ${edge.to}\n${edge.modifiedExplanation}`;
+                break;
+            case 'removed':
+                tooltipText = `Removed: ${edge.from} → ${edge.to}\nWas: ${edge.originalExplanation}`;
+                break;
+            case 'modified':
+                tooltipText = `Modified: ${edge.from} → ${edge.to}\nWas: ${edge.originalExplanation}\nNow: ${edge.modifiedExplanation}`;
+                break;
+            default:
+                tooltipText = `${edge.from} → ${edge.to}\n${edge.originalExplanation || edge.modifiedExplanation}`;
+        }
+        
+        line.innerHTML = `<title>${tooltipText}</title>`;
+        
+        svg.appendChild(line);
+        edgeElements.push(line);
+    });
+    
+    // Create arrowhead markers
+    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    const arrowTypes = ['added', 'removed', 'modified', 'existing'];
+    const arrowColors = ['#A2AD00', '#FF6B35', '#FFDC00', '#6A757E'];
+    
+    arrowTypes.forEach((type, index) => {
+        const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+        marker.setAttribute('id', `arrowhead-${type}`);
+        marker.setAttribute('markerWidth', '10');
+        marker.setAttribute('markerHeight', '7');
+        marker.setAttribute('refX', '9');
+        marker.setAttribute('refY', '3.5');
+        marker.setAttribute('orient', 'auto');
+        
+        const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        polygon.setAttribute('points', '0 0, 10 3.5, 0 7');
+        polygon.setAttribute('fill', arrowColors[index]);
+        
+        marker.appendChild(polygon);
+        defs.appendChild(marker);
+    });
+    
+    svg.appendChild(defs);
+    
+    // Create nodes (on top of edges)
+    allActivities.forEach(activity => {
+        const pos = nodePositions[activity];
+        const isRemoved = !modifiedData.activities.includes(activity);
+        const isAdded = !originalData.activities.includes(activity);
+        
+        // Create circle
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('cx', pos.x);
+        circle.setAttribute('cy', pos.y);
+        circle.setAttribute('r', nodeRadius);
+        circle.classList.add('activity-node');
+        
+        // Set colors based on activity status
+        if (isAdded) {
+            circle.setAttribute('fill', '#A2AD00');
+            circle.setAttribute('stroke', '#7A8500');
+        } else if (isRemoved) {
+            circle.setAttribute('fill', '#FF6B35');
+            circle.setAttribute('stroke', '#CC5429');
+        } else {
+            circle.setAttribute('fill', '#0065BD');
+            circle.setAttribute('stroke', '#004A8C');
+        }
+        circle.setAttribute('stroke-width', '2');
+        
+        // Add activity label
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', pos.x);
+        text.setAttribute('y', pos.y + 5);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('fill', '#FFFFFF');
+        text.setAttribute('font-family', 'Arial, sans-serif');
+        text.setAttribute('font-weight', 'bold');
+        text.setAttribute('font-size', '12');
+        text.textContent = activity;
+        text.classList.add('activity-label');
+        
+        // Add tooltip for activity status
+        let activityTooltip = activity;
+        if (isAdded) activityTooltip += ' (Added)';
+        if (isRemoved) activityTooltip += ' (Removed)';
+        
+        circle.innerHTML = `<title>${activityTooltip}</title>`;
+        
+        svg.appendChild(circle);
+        svg.appendChild(text);
+    });
+    
+    // Add legend
+    const legend = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    legend.setAttribute('transform', 'translate(10, 10)');
+    
+    const legendItems = [
+        { color: '#A2AD00', label: 'Added', type: 'edge' },
+        { color: '#FF6B35', label: 'Removed', type: 'edge' },
+        { color: '#FFDC00', label: 'Modified', type: 'edge' },
+        { color: '#6A757E', label: 'Unchanged', type: 'edge' }
+    ];
+    
+    legendItems.forEach((item, index) => {
+        const y = index * 20;
+        
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', 0);
+        line.setAttribute('y1', y + 10);
+        line.setAttribute('x2', 20);
+        line.setAttribute('y2', y + 10);
+        line.setAttribute('stroke', item.color);
+        line.setAttribute('stroke-width', '3');
+        legend.appendChild(line);
+        
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', 25);
+        text.setAttribute('y', y + 14);
+        text.setAttribute('fill', '#FFFFFF');
+        text.setAttribute('font-family', 'Arial, sans-serif');
+        text.setAttribute('font-size', '12');
+        text.textContent = item.label;
+        legend.appendChild(text);
+    });
+    
+    svg.appendChild(legend);
+    graphContainer.appendChild(svg);
+}
 
 // Initialize page
 document.addEventListener('DOMContentLoaded', function() {
