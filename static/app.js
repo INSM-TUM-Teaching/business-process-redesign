@@ -191,45 +191,7 @@ function displayDependenciesComparison(originalData, modifiedData, elementId) {
     comparisonHtml += '<h4>Dependency Changes Overview</h4>';
     comparisonHtml += '<div class="comparison-explanation">See what changed after the operation was performed:</div>';
     
-    // Create before and after sections
-    comparisonHtml += '<div class="comparison-sections">';
-    
-    // Before section
-    comparisonHtml += '<div class="comparison-section before-section">';
-    comparisonHtml += '<h5 class="section-header">Before Operation</h5>';
-    comparisonHtml += '<div class="dependencies-summary">';
-    
-    // Get original dependencies
-    const originalDeps = getDependencyPairs(originalData);
-    if (originalDeps.length === 0) {
-        comparisonHtml += '<div class="no-dependencies">No specific dependencies found.</div>';
-    } else {
-        originalDeps.forEach(dep => {
-            comparisonHtml += `<div class="dependency-item-compact">${dep.from} → ${dep.to}: ${dep.explanation}</div>`;
-        });
-    }
-    
-    comparisonHtml += '</div></div>';
-    
-    // After section  
-    comparisonHtml += '<div class="comparison-section after-section">';
-    comparisonHtml += '<h5 class="section-header">After Operation</h5>';
-    comparisonHtml += '<div class="dependencies-summary">';
-    
-    // Get modified dependencies
-    const modifiedDeps = getDependencyPairs(modifiedData);
-    if (modifiedDeps.length === 0) {
-        comparisonHtml += '<div class="no-dependencies">No specific dependencies found.</div>';
-    } else {
-        modifiedDeps.forEach(dep => {
-            comparisonHtml += `<div class="dependency-item-compact">${dep.from} → ${dep.to}: ${dep.explanation}</div>`;
-        });
-    }
-    
-    comparisonHtml += '</div></div>';
-    comparisonHtml += '</div>'; // end comparison-sections
-    
-    // Add detailed changes section
+    // Add detailed changes section (no Before/After sections)
     comparisonHtml += '<div class="detailed-changes">';
     comparisonHtml += '<h5>What Changed</h5>';
     
@@ -238,7 +200,7 @@ function displayDependenciesComparison(originalData, modifiedData, elementId) {
         comparisonHtml += '<div class="no-changes">No dependency changes detected.</div>';
     } else {
         changes.forEach(change => {
-            comparisonHtml += `<div class="change-item ${change.type}" title="${change.tooltip}">${change.description}</div>`;
+            comparisonHtml += `<div class="change-item ${change.type}">${change.details}</div>`;
         });
     }
     
@@ -340,30 +302,55 @@ function compareDepencencies(originalData, modifiedData) {
     const originalDeps = getDependencyPairs(originalData);
     const modifiedDeps = getDependencyPairs(modifiedData);
     
-    // Find removed dependencies
+    // Helper function to check if two dependencies are of compatible types for modification
+    function areCompatibleTypes(type1, type2) {
+        const temporalTypes = ['Direct Forward Temporal', 'Eventual Forward Temporal', 'Direct Backward Temporal', 'Eventual Backward Temporal'];
+        const existentialTypes = ['Forward Implication', 'Backward Implication', 'Equivalence', 'Negated Equivalence', 'AND', 'NAND', 'OR'];
+        
+        // Check if both are temporal types
+        const type1IsTemporal = temporalTypes.some(temp => type1.includes(temp));
+        const type2IsTemporal = temporalTypes.some(temp => type2.includes(temp));
+        
+        // Check if both are existential types  
+        const type1IsExistential = existentialTypes.some(exist => type1.includes(exist));
+        const type2IsExistential = existentialTypes.some(exist => type2.includes(exist));
+        
+        // They are compatible if they are both temporal or both existential
+        return (type1IsTemporal && type2IsTemporal) || (type1IsExistential && type2IsExistential);
+    }
+    
+    // Helper function to check if a dependency is truly removed (not just became independence)
+    function isDependencyTrulyRemoved(originalDep, modifiedData) {
+        const modifiedMatrix = modifiedData.matrix;
+        const modifiedCellContent = modifiedMatrix[originalDep.from] && modifiedMatrix[originalDep.from][originalDep.to];
+        
+        // If the cell doesn't exist in modified matrix or is completely empty, it's truly removed
+        // If it's '-,-' (independence), it's not removed, just became independent
+        return !modifiedCellContent || modifiedCellContent === '';
+    }
+    
+    // Find removed dependencies (only when truly removed, not when becoming independent)
     originalDeps.forEach(originalDep => {
-        const exists = modifiedDeps.find(modifiedDep => 
-            modifiedDep.from === originalDep.from && modifiedDep.to === originalDep.to
-        );
-        if (!exists) {
+        if (isDependencyTrulyRemoved(originalDep, modifiedData)) {
             const dependencyType = identifyDependencyType(originalDep.content);
             changes.push({
                 type: 'removed',
                 description: `Removed: ${originalDep.from} → ${originalDep.to}`,
-                tooltip: `This dependency was removed.\n\nType: ${dependencyType}\nDescription: ${originalDep.explanation}`,
+                tooltip: `This dependency was completely removed.\n\nType: ${dependencyType}\nDescription: ${originalDep.explanation}`,
                 from: originalDep.from,
                 to: originalDep.to,
-                details: `Was: ${dependencyType} (${originalDep.explanation})`
+                details: `Removed: ${originalDep.from} → ${originalDep.to} (was: ${dependencyType} - ${originalDep.explanation})`
             });
         }
     });
     
     // Find added dependencies
     modifiedDeps.forEach(modifiedDep => {
-        const exists = originalDeps.find(originalDep => 
-            originalDep.from === modifiedDep.from && originalDep.to === modifiedDep.to
-        );
-        if (!exists) {
+        const originalMatrix = originalData.matrix;
+        const originalCellContent = originalMatrix[modifiedDep.from] && originalMatrix[modifiedDep.from][modifiedDep.to];
+        
+        // Only consider it added if it didn't exist before or was empty (not if it was independence)
+        if (!originalCellContent || originalCellContent === '') {
             const dependencyType = identifyDependencyType(modifiedDep.content);
             changes.push({
                 type: 'added',
@@ -371,12 +358,12 @@ function compareDepencencies(originalData, modifiedData) {
                 tooltip: `This dependency was added.\n\nType: ${dependencyType}\nDescription: ${modifiedDep.explanation}`,
                 from: modifiedDep.from,
                 to: modifiedDep.to,
-                details: `Now: ${dependencyType} (${modifiedDep.explanation})`
+                details: `Added: ${modifiedDep.from} → ${modifiedDep.to} (now: ${dependencyType} - ${modifiedDep.explanation})`
             });
         }
     });
     
-    // Find modified dependencies
+    // Find modified dependencies (only between compatible types)
     originalDeps.forEach(originalDep => {
         const modifiedDep = modifiedDeps.find(dep => 
             dep.from === originalDep.from && dep.to === originalDep.to
@@ -385,14 +372,17 @@ function compareDepencencies(originalData, modifiedData) {
             const originalType = identifyDependencyType(originalDep.content);
             const modifiedType = identifyDependencyType(modifiedDep.content);
             
-            changes.push({
-                type: 'modified',
-                description: `Modified: ${originalDep.from} → ${originalDep.to}`,
-                tooltip: `This dependency was changed:\n\nWAS: ${originalType}\nNOW: ${modifiedType}\n\nBefore: ${originalDep.explanation}\nAfter: ${modifiedDep.explanation}`,
-                from: originalDep.from,
-                to: originalDep.to,
-                details: `Was: ${originalType} (${originalDep.explanation})\nNow: ${modifiedType} (${modifiedDep.explanation})`
-            });
+            // Only show changes between compatible types
+            if (areCompatibleTypes(originalType, modifiedType)) {
+                changes.push({
+                    type: 'modified',
+                    description: `Modified: ${originalDep.from} → ${originalDep.to}`,
+                    tooltip: `This dependency was changed:\n\nWAS: ${originalType}\nNOW: ${modifiedType}\n\nBefore: ${originalDep.explanation}\nAfter: ${modifiedDep.explanation}`,
+                    from: originalDep.from,
+                    to: originalDep.to,
+                    details: `Modified: ${originalDep.from} → ${originalDep.to} (was: ${originalType} - ${originalDep.explanation} | now: ${modifiedType} - ${modifiedDep.explanation})`
+                });
+            }
         }
     });
     
@@ -406,7 +396,8 @@ function compareDepencencies(originalData, modifiedData) {
                 type: 'removed-activity',
                 description: `Activity "${activity}" removed`,
                 tooltip: `Activity "${activity}" was removed from the process`,
-                activity: activity
+                activity: activity,
+                details: `Removed: Activity "${activity}" was removed from the process`
             });
         }
     });
@@ -418,7 +409,8 @@ function compareDepencencies(originalData, modifiedData) {
                 type: 'added-activity', 
                 description: `Activity "${activity}" added`,
                 tooltip: `Activity "${activity}" was added to the process`,
-                activity: activity
+                activity: activity,
+                details: `Added: Activity "${activity}" was added to the process`
             });
         }
     });
