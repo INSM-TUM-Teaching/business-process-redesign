@@ -879,12 +879,11 @@ body {
 /* SVG node and edge hover effects */
 .activity-node {
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: filter 0.3s ease;
 }
 
 .activity-node:hover {
     filter: brightness(1.2);
-    transform: scale(1.1);
 }
 
 .dependency-edge {

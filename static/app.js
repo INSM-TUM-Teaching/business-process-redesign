@@ -272,11 +272,13 @@ function getDependencyPairs(data) {
                 const cellContent = matrix[fromActivity][toActivity];
                 if (cellContent && cellContent !== '' && cellContent !== '-,-') {
                     const explanation = parseDependencyExplanationCompact(cellContent, fromActivity, toActivity);
+                    const detailed = parseDependencyExplanation(cellContent, fromActivity, toActivity);
                     dependencies.push({
                         from: fromActivity,
                         to: toActivity,
                         content: cellContent,
-                        explanation: explanation
+                        explanation: explanation,
+                        detailed: detailed
                     });
                 }
             }
@@ -1088,27 +1090,30 @@ function createDependencyGraph(originalData, modifiedData, changes) {
     
     // Process original dependencies
     originalDeps.forEach(dep => {
-        const key = `${dep.from}->${dep.to}`;
+        const key = `${dep.from}-${dep.to}`;
         edgeMap.set(key, {
             from: dep.from,
             to: dep.to,
             originalExplanation: dep.explanation,
+            originalDetailed: dep.detailed || dep.explanation,
             type: 'existing'
         });
     });
     
     // Process modified dependencies
     modifiedDeps.forEach(dep => {
-        const key = `${dep.from}->${dep.to}`;
+        const key = `${dep.from}-${dep.to}`;
         if (edgeMap.has(key)) {
             const existing = edgeMap.get(key);
             existing.modifiedExplanation = dep.explanation;
+            existing.modifiedDetailed = dep.detailed || dep.explanation;
             existing.type = existing.originalExplanation === dep.explanation ? 'existing' : 'modified';
         } else {
             edgeMap.set(key, {
                 from: dep.from,
                 to: dep.to,
                 modifiedExplanation: dep.explanation,
+                modifiedDetailed: dep.detailed || dep.explanation,
                 type: 'added'
             });
         }
@@ -1116,7 +1121,7 @@ function createDependencyGraph(originalData, modifiedData, changes) {
     
     // Mark removed dependencies
     originalDeps.forEach(dep => {
-        const key = `${dep.from}->${dep.to}`;
+        const key = `${dep.from}-${dep.to}`;
         const edge = edgeMap.get(key);
         if (edge && !edge.modifiedExplanation) {
             edge.type = 'removed';
@@ -1139,17 +1144,16 @@ function createDependencyGraph(originalData, modifiedData, changes) {
         
         const startX = fromPos.x + unitX * nodeRadius;
         const startY = fromPos.y + unitY * nodeRadius;
-        const endX = toPos.x - unitX * (nodeRadius + 10); // Leave space for arrowhead
-        const endY = toPos.y - unitY * (nodeRadius + 10);
+        const endX = toPos.x - unitX * nodeRadius;
+        const endY = toPos.y - unitY * nodeRadius;
         
-        // Create line element
+        // Create line element (no arrowheads)
         const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
         line.setAttribute('x1', startX);
         line.setAttribute('y1', startY);
         line.setAttribute('x2', endX);
         line.setAttribute('y2', endY);
         line.setAttribute('stroke-width', '3');
-        line.setAttribute('marker-end', `url(#arrowhead-${edge.type})`);
         line.classList.add('dependency-edge', `edge-${edge.type}`);
         
         // Set color based on change type
@@ -1169,20 +1173,20 @@ function createDependencyGraph(originalData, modifiedData, changes) {
         }
         line.setAttribute('stroke', strokeColor);
         
-        // Add hover tooltip
+        // Add verbose hover tooltip
         let tooltipText = '';
         switch (edge.type) {
             case 'added':
-                tooltipText = `Added: ${edge.from} → ${edge.to}\n${edge.modifiedExplanation}`;
+                tooltipText = `DEPENDENCY ADDED\n\nNew dependency: ${edge.from} ↔ ${edge.to}\n\nDetailed explanation:\n${createVerboseExplanation(edge.modifiedDetailed || edge.modifiedExplanation, edge.from, edge.to)}`;
                 break;
             case 'removed':
-                tooltipText = `Removed: ${edge.from} → ${edge.to}\nWas: ${edge.originalExplanation}`;
+                tooltipText = `DEPENDENCY REMOVED\n\nRemoved dependency: ${edge.from} ↔ ${edge.to}\n\nWhat was removed:\n${createVerboseExplanation(edge.originalDetailed || edge.originalExplanation, edge.from, edge.to)}`;
                 break;
             case 'modified':
-                tooltipText = `Modified: ${edge.from} → ${edge.to}\nWas: ${edge.originalExplanation}\nNow: ${edge.modifiedExplanation}`;
+                tooltipText = `DEPENDENCY MODIFIED\n\nChanged dependency: ${edge.from} ↔ ${edge.to}\n\nBefore:\n${createVerboseExplanation(edge.originalDetailed || edge.originalExplanation, edge.from, edge.to)}\n\nAfter:\n${createVerboseExplanation(edge.modifiedDetailed || edge.modifiedExplanation, edge.from, edge.to)}`;
                 break;
             default:
-                tooltipText = `${edge.from} → ${edge.to}\n${edge.originalExplanation || edge.modifiedExplanation}`;
+                tooltipText = `UNCHANGED DEPENDENCY\n\nExisting dependency: ${edge.from} ↔ ${edge.to}\n\nExplanation:\n${createVerboseExplanation(edge.originalDetailed || edge.originalExplanation || edge.modifiedDetailed || edge.modifiedExplanation, edge.from, edge.to)}`;
         }
         
         line.innerHTML = `<title>${tooltipText}</title>`;
@@ -1190,30 +1194,6 @@ function createDependencyGraph(originalData, modifiedData, changes) {
         svg.appendChild(line);
         edgeElements.push(line);
     });
-    
-    // Create arrowhead markers
-    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-    const arrowTypes = ['added', 'removed', 'modified', 'existing'];
-    const arrowColors = ['#A2AD00', '#FF6B35', '#FFDC00', '#6A757E'];
-    
-    arrowTypes.forEach((type, index) => {
-        const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
-        marker.setAttribute('id', `arrowhead-${type}`);
-        marker.setAttribute('markerWidth', '10');
-        marker.setAttribute('markerHeight', '7');
-        marker.setAttribute('refX', '9');
-        marker.setAttribute('refY', '3.5');
-        marker.setAttribute('orient', 'auto');
-        
-        const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-        polygon.setAttribute('points', '0 0, 10 3.5, 0 7');
-        polygon.setAttribute('fill', arrowColors[index]);
-        
-        marker.appendChild(polygon);
-        defs.appendChild(marker);
-    });
-    
-    svg.appendChild(defs);
     
     // Create nodes (on top of edges)
     allActivities.forEach(activity => {
@@ -1254,9 +1234,10 @@ function createDependencyGraph(originalData, modifiedData, changes) {
         text.classList.add('activity-label');
         
         // Add tooltip for activity status
-        let activityTooltip = activity;
-        if (isAdded) activityTooltip += ' (Added)';
-        if (isRemoved) activityTooltip += ' (Removed)';
+        let activityTooltip = `ACTIVITY: ${activity}`;
+        if (isAdded) activityTooltip += '\n\nSTATUS: This activity was added to the process';
+        else if (isRemoved) activityTooltip += '\n\nSTATUS: This activity was removed from the process';
+        else activityTooltip += '\n\nSTATUS: This activity remains unchanged in the process';
         
         circle.innerHTML = `<title>${activityTooltip}</title>`;
         
@@ -1299,6 +1280,37 @@ function createDependencyGraph(originalData, modifiedData, changes) {
     
     svg.appendChild(legend);
     graphContainer.appendChild(svg);
+}
+
+// Create verbose explanation for tooltips
+function createVerboseExplanation(explanation, fromActivity, toActivity) {
+    // If explanation already contains HTML or detailed text, strip HTML and use it
+    if (explanation && explanation.includes('must happen') || explanation.includes('Timing:') || explanation.includes('Occurrence:')) {
+        // Strip HTML tags and extract the meaningful text
+        return explanation.replace(/<[^>]*>/g, '').replace(/&[^;]+;/g, ' ').trim();
+    }
+    
+    // If it's a compact explanation, try to expand it based on patterns
+    if (explanation && explanation.includes('directly before')) {
+        return `${fromActivity} must happen immediately before ${toActivity} with no other activities in between. This is a direct temporal dependency that enforces strict ordering.`;
+    } else if (explanation && explanation.includes('before')) {
+        return `${fromActivity} must happen before ${toActivity}, but other activities can happen in between. This is an eventual temporal dependency that allows flexibility in execution.`;
+    } else if (explanation && explanation.includes('if') && explanation.includes('then')) {
+        return `If ${fromActivity} occurs in a process instance, then ${toActivity} must also occur in that same instance. This is an implication dependency that links the existence of these activities.`;
+    } else if (explanation && explanation.includes('both happen or both not happen')) {
+        return `${fromActivity} and ${toActivity} must always occur together - either both happen or neither happens in any process instance. This is an equivalence dependency that ensures mutual occurrence.`;
+    } else if (explanation && explanation.includes('cannot both occur')) {
+        return `${fromActivity} and ${toActivity} cannot both occur in the same process instance. This is a NAND dependency that prevents simultaneous execution.`;
+    } else if (explanation && explanation.includes('must occur')) {
+        return `Both ${fromActivity} and ${toActivity} must occur together in every process instance. This is an AND dependency that requires both activities.`;
+    } else if (explanation && explanation.includes('must happen')) {
+        return `At least one of ${fromActivity} or ${toActivity} must occur in every process instance. This is an OR dependency that requires at least one activity.`;
+    } else if (explanation && explanation.includes('not both')) {
+        return `Either ${fromActivity} or ${toActivity} can happen, but not both. This is a mutual exclusion dependency that allows only one activity.`;
+    }
+    
+    // Fallback for any other explanation
+    return explanation || 'No specific dependency constraint between these activities - they can occur independently.';
 }
 
 // Initialize page
