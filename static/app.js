@@ -7,9 +7,6 @@ let lockedDependencies = [];
 function processInput() {
     const tracesInput = document.getElementById('traces-input').value;
     const yamlFile = document.getElementById('yaml-file').files[0];
-    const originalDependenciesDisplay = document.getElementById('original-dependencies-display');
-
-    originalDependenciesDisplay.innerHTML = '<div class="alert alert-info"><span class="loading"></span> Processing...</div>';
 
     let fetchOptions;
 
@@ -32,7 +29,7 @@ function processInput() {
             body: JSON.stringify({ traces: traces })
         };
     } else {
-        originalDependenciesDisplay.innerHTML = '<div class="alert alert-warning">Please provide traces or upload a YAML file.</div>';
+        alert('Please provide traces or upload a YAML file.');
         return;
     }
 
@@ -42,19 +39,16 @@ function processInput() {
             if (data.success) {
                 fetchAndDisplayDependencies();
             } else {
-                originalDependenciesDisplay.innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
+                alert(`Error: ${data.error}`);
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            originalDependenciesDisplay.innerHTML = '<div class="alert alert-danger">An unexpected error occurred.</div>';
+            alert('An unexpected error occurred.');
         });
 }
 
 function fetchAndDisplayDependencies() {
-    const originalDependenciesDisplay = document.getElementById('original-dependencies-display');
-    originalDependenciesDisplay.innerHTML = '<div class="alert alert-info"><span class="loading"></span> Analyzing dependencies...</div>';
-
     fetch('/api/matrix')
         .then(response => response.json())
         .then(data => {
@@ -62,7 +56,6 @@ function fetchAndDisplayDependencies() {
                 originalDependenciesData = data;
                 modifiedDependenciesData = null; // Clear any previous modified dependencies
                 
-                displayDependencies(data, 'original-dependencies-display');
                 document.getElementById('modified-dependencies-display').innerHTML = '<div class="alert alert-info">The result of the operation will be displayed here.</div>';
                 
                 // Reset dependencies source selection to "original" and disable "modified" option
@@ -71,15 +64,14 @@ function fetchAndDisplayDependencies() {
                 const modifiedOption = document.querySelector('#dependencies-source-select option[value="modified"]');
                 modifiedOption.disabled = true;
                 modifiedOption.textContent = 'Modified Dependencies';
-                updateDependenciesSourceTitle();
                 populateLockSelections(data.activities);
             } else {
-                document.getElementById('original-dependencies-display').innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
+                alert(`Error: ${data.error}`);
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            document.getElementById('original-dependencies-display').innerHTML = '<div class="alert alert-danger">Failed to analyze dependencies.</div>';
+            alert('Failed to analyze dependencies.');
         });
 }
 
@@ -928,12 +920,10 @@ function performChangeOperation() {
             break;
     }
 
-    const originalDependenciesDisplay = document.getElementById('original-dependencies-display');
     const modifiedDependenciesDisplay = document.getElementById('modified-dependencies-display');
     
     document.getElementById('export-button').style.display = 'none';
     
-    originalDependenciesDisplay.innerHTML = '<div class="alert alert-info"><span class="loading"></span> Performing operation...</div>';
     modifiedDependenciesDisplay.innerHTML = '<div class="alert alert-info"><span class="loading"></span> Performing operation...</div>';
 
     fetch('/api/change', {
@@ -945,7 +935,6 @@ function performChangeOperation() {
         if (data.success) {
             modifiedDependenciesData = data.modified;
             
-            displayDependencies(data.original, 'original-dependencies-display');
             displayDependenciesComparison(data.original, data.modified, 'modified-dependencies-display');
             console.log('Diff Info:', data.diff_info);
             
@@ -953,22 +942,14 @@ function performChangeOperation() {
             modifiedOption.disabled = false;
             modifiedOption.textContent = 'Modified Dependencies (Available)';
             
-            // Update the source dependencies display if "modified" is currently selected
-            const dependenciesSource = document.getElementById('dependencies-source-select').value;
-            if (dependenciesSource === 'modified') {
-                updateSourceDependenciesDisplay('modified');
-            }
-            
             document.getElementById('export-button').style.display = 'inline-block';
         } else {
-            originalDependenciesDisplay.innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
             modifiedDependenciesDisplay.innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
             document.getElementById('export-button').style.display = 'none';
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        originalDependenciesDisplay.innerHTML = '<div class="alert alert-danger">An unexpected error occurred.</div>';
         modifiedDependenciesDisplay.innerHTML = '<div class="alert alert-danger">An unexpected error occurred.</div>';
         // Hide export button on error
         document.getElementById('export-button').style.display = 'none';
@@ -1001,91 +982,14 @@ function exportModifiedDependencies() {
         });
 }
 
-function updateDependenciesSourceTitle() {
-    const dependenciesSource = document.getElementById('dependencies-source-select').value;
-    const titleElement = document.getElementById('source-dependencies-title');
-    const modifiedOption = document.querySelector('#dependencies-source-select option[value="modified"]');
-    
-    if (dependenciesSource === 'modified') {
-        titleElement.textContent = 'Modified Dependencies (Source)';
-        if (modifiedOption.disabled) {
-            // If modified option is disabled, reset to original
-            document.getElementById('dependencies-source-select').value = 'original';
-            titleElement.textContent = 'Initial Dependencies (Source)';
-            showDependenciesSourceStatus('original');
-            updateSourceDependenciesDisplay('original');
-        } else {
-            showDependenciesSourceStatus('modified');
-            updateSourceDependenciesDisplay('modified');
-        }
-    } else {
-        titleElement.textContent = 'Initial Dependencies (Source)';
-        showDependenciesSourceStatus('original');
-        updateSourceDependenciesDisplay('original');
-    }
-}
-
-function updateSourceDependenciesDisplay(dependenciesSource) {
-    const sourceDisplay = document.getElementById('original-dependencies-display');
-    
-    if (dependenciesSource === 'modified' && modifiedDependenciesData) {
-        displayDependencies(modifiedDependenciesData, 'original-dependencies-display');
-    } else if (dependenciesSource === 'original' && originalDependenciesData) {
-        displayDependencies(originalDependenciesData, 'original-dependencies-display');
-    } else {
-        sourceDisplay.innerHTML = '<div class="alert alert-info">Analyze dependencies first to perform operations on them.</div>';
-    }
-}
-
-function showDependenciesSourceStatus(dependenciesSource) {
-    const statusMessages = {
-        'original': 'Using Initial Dependencies as source for operation',
-        'modified': 'Using Modified Dependencies as source for operation'
-    };
-    
-    let statusElement = document.getElementById('dependencies-source-status');
-    if (!statusElement) {
-        statusElement = document.createElement('div');
-        statusElement.id = 'dependencies-source-status';
-        statusElement.className = 'alert alert-info';
-        statusElement.style.marginTop = '10px';
-        statusElement.style.fontSize = '0.9em';
-        
-        const operationInputs = document.getElementById('operation-inputs');
-        if (operationInputs.nextSibling) {
-            operationInputs.parentNode.insertBefore(statusElement, operationInputs.nextSibling);
-        } else {
-            operationInputs.parentNode.appendChild(statusElement);
-        }
-    }
-    
-    statusElement.textContent = statusMessages[dependenciesSource] || '';
-    statusElement.style.display = dependenciesSource ? 'block' : 'none';
-}
-
-function updateSourceDependenciesDisplayAlt(dependenciesSource) {
-    const originalDependenciesDisplay = document.getElementById('original-dependencies-display');
-    const modifiedDependenciesDisplay = document.getElementById('modified-dependencies-display');
-    
-    if (dependenciesSource === 'original' && originalDependenciesData) {
-        displayDependencies(originalDependenciesData, 'original-dependencies-display');
-    } else if (dependenciesSource === 'modified' && modifiedDependenciesData) {
-        displayDependencies(modifiedDependenciesData, 'modified-dependencies-display');
-    }
-}
 
 // Initialize page
 document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('change-operation-select').addEventListener('change', updateOperationInputs);
-    document.getElementById('dependencies-source-select').addEventListener('change', () => {
-        updateDependenciesSourceTitle();
-        showDependenciesSourceStatus(document.getElementById('dependencies-source-select').value);
-    });
     
     // Initialize the "Modified Dependencies" option as disabled
     const modifiedOption = document.querySelector('#dependencies-source-select option[value="modified"]');
     modifiedOption.disabled = true;
-    updateDependenciesSourceTitle();
     
     console.log('Business Process Redesign Tool initialized');
 });
