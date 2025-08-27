@@ -9,7 +9,7 @@
     --text-secondary: #EBECEF;    /* lighter grey for better contrast */
     --text-muted: #AEB8C2;        /* light muted text for sufficient contrast */
     --border-color: #6A757E;      /* slightly lighter border for visual separation */
-    --success-color: #A2AD00;     /* TUM Green */
+    --success-color: #27AE60;     /* Brighter green for better contrast with yellow */
     --warning-color: #FFDC00;     /* TUM Yellow */
     --danger-color: #FF6B35;      /* Bold Orange instead of red */
     --info-color: #0065BD;        /* TUM Blue */
@@ -326,7 +326,7 @@ body {
 
 .dependency-card.diff-added {
     border-left-color: var(--success-color);
-    background: #2d4a2d;
+    background: #1E8449; /* Use consistent darker green */
 }
 
 .dependency-card.diff-removed {
@@ -576,10 +576,10 @@ body {
     margin-top: 1.5rem;
 }
 
-/* Diff highlighting styles for matrix cells */
+/* Matrix diff highlighting styles - update for consistency */
 .matrix-table td.diff-added {
-    background-color: #2d5a2d !important; /* Dark green for added content */
-    border: 2px solid #4a9 !important;
+    background-color: #1E8449 !important; /* Use consistent green */
+    border: 2px solid #27AE60 !important;
     position: relative;
 }
 
@@ -596,8 +596,8 @@ body {
 }
 
 .matrix-table td.diff-added-activity {
-    background-color: #1f4a1f !important; /* Darker green for added activities */
-    border: 2px solid #27ae60 !important;
+    background-color: #1E8449 !important; /* Use consistent green */
+    border: 2px solid #27AE60 !important;
 }
 
 .matrix-table td.diff-removed-activity {
@@ -656,8 +656,8 @@ body {
 }
 
 .diff-legend-color.added {
-    background-color: #2d5a2d;
-    border-color: #4a9;
+    background-color: #1E8449; /* Darker shade of the brighter green */
+    border-color: #27AE60;
 }
 
 .diff-legend-color.removed {
@@ -671,8 +671,8 @@ body {
 }
 
 .diff-legend-color.added-activity {
-    background-color: #1f4a1f;
-    border-color: #27ae60;
+    background-color: #1E8449; /* Use consistent green */
+    border-color: #27AE60;
 }
 
 .diff-legend-color.removed-activity {
@@ -682,8 +682,8 @@ body {
 
 /* Header highlighting for added/removed activities */
 .matrix-table th.diff-added-activity {
-    background-color: #1f4a1f !important;
-    border: 2px solid #27ae60 !important;
+    background-color: #1E8449 !important; /* Use consistent green */
+    border: 2px solid #27AE60 !important;
 }
 
 .matrix-table th.diff-removed-activity {
@@ -783,7 +783,7 @@ body {
 }
 
 .change-item.added {
-    background: rgba(162, 173, 0, 0.1);
+    background: rgba(39, 174, 96, 0.15); /* Use brighter green with opacity */
     border-left-color: var(--success-color);
     color: var(--text-primary);
 }
@@ -801,7 +801,7 @@ body {
 }
 
 .change-item.added-activity {
-    background: rgba(162, 173, 0, 0.15);
+    background: rgba(39, 174, 96, 0.2); /* Use brighter green with higher opacity */
     border-left-color: var(--success-color);
     color: var(--text-primary);
     font-weight: 600;

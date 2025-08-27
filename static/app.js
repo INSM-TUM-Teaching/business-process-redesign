@@ -346,13 +346,14 @@ function compareDepencencies(originalData, modifiedData) {
             modifiedDep.from === originalDep.from && modifiedDep.to === originalDep.to
         );
         if (!exists) {
+            const dependencyType = identifyDependencyType(originalDep.content);
             changes.push({
                 type: 'removed',
                 description: `Removed: ${originalDep.from} → ${originalDep.to}`,
-                tooltip: `This dependency was removed. It was: ${originalDep.explanation}`,
+                tooltip: `This dependency was removed.\n\nType: ${dependencyType}\nDescription: ${originalDep.explanation}`,
                 from: originalDep.from,
                 to: originalDep.to,
-                details: `Was: ${originalDep.explanation}`
+                details: `Was: ${dependencyType} (${originalDep.explanation})`
             });
         }
     });
@@ -363,13 +364,14 @@ function compareDepencencies(originalData, modifiedData) {
             originalDep.from === modifiedDep.from && originalDep.to === modifiedDep.to
         );
         if (!exists) {
+            const dependencyType = identifyDependencyType(modifiedDep.content);
             changes.push({
                 type: 'added',
                 description: `Added: ${modifiedDep.from} → ${modifiedDep.to}`,
-                tooltip: `This dependency was added: ${modifiedDep.explanation}`,
+                tooltip: `This dependency was added.\n\nType: ${dependencyType}\nDescription: ${modifiedDep.explanation}`,
                 from: modifiedDep.from,
                 to: modifiedDep.to,
-                details: `Now: ${modifiedDep.explanation}`
+                details: `Now: ${dependencyType} (${modifiedDep.explanation})`
             });
         }
     });
@@ -380,13 +382,16 @@ function compareDepencencies(originalData, modifiedData) {
             dep.from === originalDep.from && dep.to === originalDep.to
         );
         if (modifiedDep && modifiedDep.content !== originalDep.content) {
+            const originalType = identifyDependencyType(originalDep.content);
+            const modifiedType = identifyDependencyType(modifiedDep.content);
+            
             changes.push({
                 type: 'modified',
                 description: `Modified: ${originalDep.from} → ${originalDep.to}`,
-                tooltip: `This dependency was changed from "${originalDep.explanation}" to "${modifiedDep.explanation}"`,
+                tooltip: `This dependency was changed:\n\nWAS: ${originalType}\nNOW: ${modifiedType}\n\nBefore: ${originalDep.explanation}\nAfter: ${modifiedDep.explanation}`,
                 from: originalDep.from,
                 to: originalDep.to,
-                details: `Was: ${originalDep.explanation}, Now: ${modifiedDep.explanation}`
+                details: `Was: ${originalType} (${originalDep.explanation})\nNow: ${modifiedType} (${modifiedDep.explanation})`
             });
         }
     });
@@ -1096,6 +1101,7 @@ function createDependencyGraph(originalData, modifiedData, changes) {
             to: dep.to,
             originalExplanation: dep.explanation,
             originalDetailed: dep.detailed || dep.explanation,
+            originalContent: dep.content,
             type: 'existing'
         });
     });
@@ -1107,6 +1113,7 @@ function createDependencyGraph(originalData, modifiedData, changes) {
             const existing = edgeMap.get(key);
             existing.modifiedExplanation = dep.explanation;
             existing.modifiedDetailed = dep.detailed || dep.explanation;
+            existing.modifiedContent = dep.content;
             existing.type = existing.originalExplanation === dep.explanation ? 'existing' : 'modified';
         } else {
             edgeMap.set(key, {
@@ -1114,6 +1121,7 @@ function createDependencyGraph(originalData, modifiedData, changes) {
                 to: dep.to,
                 modifiedExplanation: dep.explanation,
                 modifiedDetailed: dep.detailed || dep.explanation,
+                modifiedContent: dep.content,
                 type: 'added'
             });
         }
@@ -1160,7 +1168,7 @@ function createDependencyGraph(originalData, modifiedData, changes) {
         let strokeColor;
         switch (edge.type) {
             case 'added':
-                strokeColor = '#A2AD00'; // TUM Green
+                strokeColor = '#27AE60'; // Brighter green for better contrast with yellow
                 break;
             case 'removed':
                 strokeColor = '#FF6B35'; // Orange
@@ -1177,16 +1185,21 @@ function createDependencyGraph(originalData, modifiedData, changes) {
         let tooltipText = '';
         switch (edge.type) {
             case 'added':
-                tooltipText = `DEPENDENCY ADDED\n\nNew dependency: ${edge.from} ↔ ${edge.to}\n\nDetailed explanation:\n${createVerboseExplanation(edge.modifiedDetailed || edge.modifiedExplanation, edge.from, edge.to)}`;
+                const addedType = identifyDependencyType(edge.modifiedContent);
+                tooltipText = `DEPENDENCY ADDED\n\nNew dependency: ${edge.from} ↔ ${edge.to}\nDependency Type: ${addedType}\n\nDetailed explanation:\n${createVerboseExplanation(edge.modifiedDetailed || edge.modifiedExplanation, edge.from, edge.to)}`;
                 break;
             case 'removed':
-                tooltipText = `DEPENDENCY REMOVED\n\nRemoved dependency: ${edge.from} ↔ ${edge.to}\n\nWhat was removed:\n${createVerboseExplanation(edge.originalDetailed || edge.originalExplanation, edge.from, edge.to)}`;
+                const removedType = identifyDependencyType(edge.originalContent);
+                tooltipText = `DEPENDENCY REMOVED\n\nRemoved dependency: ${edge.from} ↔ ${edge.to}\nDependency Type: ${removedType}\n\nWhat was removed:\n${createVerboseExplanation(edge.originalDetailed || edge.originalExplanation, edge.from, edge.to)}`;
                 break;
             case 'modified':
-                tooltipText = `DEPENDENCY MODIFIED\n\nChanged dependency: ${edge.from} ↔ ${edge.to}\n\nBefore:\n${createVerboseExplanation(edge.originalDetailed || edge.originalExplanation, edge.from, edge.to)}\n\nAfter:\n${createVerboseExplanation(edge.modifiedDetailed || edge.modifiedExplanation, edge.from, edge.to)}`;
+                const originalType = identifyDependencyType(edge.originalContent);
+                const modifiedType = identifyDependencyType(edge.modifiedContent);
+                tooltipText = `DEPENDENCY MODIFIED\n\nChanged dependency: ${edge.from} ↔ ${edge.to}\n\nWAS: ${originalType}\nNOW: ${modifiedType}\n\nBefore:\n${createVerboseExplanation(edge.originalDetailed || edge.originalExplanation, edge.from, edge.to)}\n\nAfter:\n${createVerboseExplanation(edge.modifiedDetailed || edge.modifiedExplanation, edge.from, edge.to)}`;
                 break;
             default:
-                tooltipText = `UNCHANGED DEPENDENCY\n\nExisting dependency: ${edge.from} ↔ ${edge.to}\n\nExplanation:\n${createVerboseExplanation(edge.originalDetailed || edge.originalExplanation || edge.modifiedDetailed || edge.modifiedExplanation, edge.from, edge.to)}`;
+                const existingType = identifyDependencyType(edge.originalContent || edge.modifiedContent);
+                tooltipText = `UNCHANGED DEPENDENCY\n\nExisting dependency: ${edge.from} ↔ ${edge.to}\nDependency Type: ${existingType}\n\nExplanation:\n${createVerboseExplanation(edge.originalDetailed || edge.originalExplanation || edge.modifiedDetailed || edge.modifiedExplanation, edge.from, edge.to)}`;
         }
         
         line.innerHTML = `<title>${tooltipText}</title>`;
@@ -1210,8 +1223,8 @@ function createDependencyGraph(originalData, modifiedData, changes) {
         
         // Set colors based on activity status
         if (isAdded) {
-            circle.setAttribute('fill', '#A2AD00');
-            circle.setAttribute('stroke', '#7A8500');
+            circle.setAttribute('fill', '#27AE60');
+            circle.setAttribute('stroke', '#1E8449');
         } else if (isRemoved) {
             circle.setAttribute('fill', '#FF6B35');
             circle.setAttribute('stroke', '#CC5429');
@@ -1250,7 +1263,7 @@ function createDependencyGraph(originalData, modifiedData, changes) {
     legend.setAttribute('transform', 'translate(10, 10)');
     
     const legendItems = [
-        { color: '#A2AD00', label: 'Added', type: 'edge' },
+        { color: '#27AE60', label: 'Added', type: 'edge' },
         { color: '#FF6B35', label: 'Removed', type: 'edge' },
         { color: '#FFDC00', label: 'Modified', type: 'edge' },
         { color: '#6A757E', label: 'Unchanged', type: 'edge' }
@@ -1285,32 +1298,77 @@ function createDependencyGraph(originalData, modifiedData, changes) {
 // Create verbose explanation for tooltips
 function createVerboseExplanation(explanation, fromActivity, toActivity) {
     // If explanation already contains HTML or detailed text, strip HTML and use it
-    if (explanation && explanation.includes('must happen') || explanation.includes('Timing:') || explanation.includes('Occurrence:')) {
+    if (explanation && (explanation.includes('must happen') || explanation.includes('Timing:') || explanation.includes('Occurrence:'))) {
         // Strip HTML tags and extract the meaningful text
         return explanation.replace(/<[^>]*>/g, '').replace(/&[^;]+;/g, ' ').trim();
     }
     
     // If it's a compact explanation, try to expand it based on patterns
     if (explanation && explanation.includes('directly before')) {
-        return `${fromActivity} must happen immediately before ${toActivity} with no other activities in between. This is a direct temporal dependency that enforces strict ordering.`;
-    } else if (explanation && explanation.includes('before')) {
-        return `${fromActivity} must happen before ${toActivity}, but other activities can happen in between. This is an eventual temporal dependency that allows flexibility in execution.`;
+        return `${fromActivity} must happen immediately before ${toActivity} with no other activities in between.\n\nThis is a DIRECT TEMPORAL DEPENDENCY that enforces strict ordering.`;
+    } else if (explanation && explanation.includes(' before ')) {
+        return `${fromActivity} must happen before ${toActivity}, but other activities can happen in between.\n\nThis is an EVENTUAL TEMPORAL DEPENDENCY that allows flexibility in execution.`;
     } else if (explanation && explanation.includes('if') && explanation.includes('then')) {
-        return `If ${fromActivity} occurs in a process instance, then ${toActivity} must also occur in that same instance. This is an implication dependency that links the existence of these activities.`;
+        return `If ${fromActivity} occurs in a process instance, then ${toActivity} must also occur in that same instance.\n\nThis is an IMPLICATION DEPENDENCY that links the existence of these activities.`;
     } else if (explanation && explanation.includes('both happen or both not happen')) {
-        return `${fromActivity} and ${toActivity} must always occur together - either both happen or neither happens in any process instance. This is an equivalence dependency that ensures mutual occurrence.`;
+        return `${fromActivity} and ${toActivity} must always occur together - either both happen or neither happens in any process instance.\n\nThis is an EQUIVALENCE DEPENDENCY that ensures mutual occurrence.`;
     } else if (explanation && explanation.includes('cannot both occur')) {
-        return `${fromActivity} and ${toActivity} cannot both occur in the same process instance. This is a NAND dependency that prevents simultaneous execution.`;
-    } else if (explanation && explanation.includes('must occur')) {
-        return `Both ${fromActivity} and ${toActivity} must occur together in every process instance. This is an AND dependency that requires both activities.`;
-    } else if (explanation && explanation.includes('must happen')) {
-        return `At least one of ${fromActivity} or ${toActivity} must occur in every process instance. This is an OR dependency that requires at least one activity.`;
+        return `${fromActivity} and ${toActivity} cannot both occur in the same process instance.\n\nThis is a NAND DEPENDENCY that prevents simultaneous execution.`;
+    } else if (explanation && explanation.includes('and') && explanation.includes('must occur')) {
+        return `Both ${fromActivity} and ${toActivity} must occur together in every process instance.\n\nThis is an AND DEPENDENCY that requires both activities.`;
+    } else if (explanation && explanation.includes('or') && explanation.includes('must occur')) {
+        return `At least one of ${fromActivity} or ${toActivity} must occur in every process instance.\n\nThis is an OR DEPENDENCY that requires at least one activity.`;
     } else if (explanation && explanation.includes('not both')) {
-        return `Either ${fromActivity} or ${toActivity} can happen, but not both. This is a mutual exclusion dependency that allows only one activity.`;
+        return `Either ${fromActivity} or ${toActivity} can happen, but not both.\n\nThis is a MUTUAL EXCLUSION DEPENDENCY that allows only one activity.`;
     }
     
     // Fallback for any other explanation
     return explanation || 'No specific dependency constraint between these activities - they can occur independently.';
+}
+
+// Function to identify formal dependency type from cell content
+function identifyDependencyType(cellContent) {
+    if (!cellContent || cellContent === '-,-') return 'No constraint';
+    
+    const parts = cellContent.split(',');
+    const temporalPart = parts[0] || '-';
+    const existentialPart = parts[1] || '-';
+    
+    let types = [];
+    
+    // Identify temporal dependency type
+    if (temporalPart !== '-') {
+        if (temporalPart.includes('≺d')) {
+            types.push('Direct Forward Temporal');
+        } else if (temporalPart.includes('≺')) {
+            types.push('Eventual Forward Temporal');
+        } else if (temporalPart.includes('≻d')) {
+            types.push('Direct Backward Temporal');
+        } else if (temporalPart.includes('≻')) {
+            types.push('Eventual Backward Temporal');
+        }
+    }
+    
+    // Identify existential dependency type
+    if (existentialPart !== '-') {
+        if (existentialPart === '=>') {
+            types.push('Forward Implication');
+        } else if (existentialPart === '<=') {
+            types.push('Backward Implication');
+        } else if (existentialPart === '⇔') {
+            types.push('Equivalence');
+        } else if (existentialPart === '⇎') {
+            types.push('Negated Equivalence');
+        } else if (existentialPart === '∧') {
+            types.push('AND');
+        } else if (existentialPart === '⊼') {
+            types.push('NAND');
+        } else if (existentialPart === '∨') {
+            types.push('OR');
+        }
+    }
+    
+    return types.length > 0 ? types.join(' + ') : 'No constraint';
 }
 
 // Initialize page
