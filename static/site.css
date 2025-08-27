@@ -521,6 +521,12 @@ body {
     color: var(--danger-color);
 }
 
+.alert-success {
+    background: rgba(162, 173, 0, 0.15);
+    border-color: var(--success-color);
+    color: var(--success-color);
+}
+
 .loading {
     display: inline-block;
     width: 20px;

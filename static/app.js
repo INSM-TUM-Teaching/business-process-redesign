@@ -5,6 +5,10 @@ let modifiedDependenciesData = null;
 let lockedDependencies = [];
 
 function processInput() {
+    // Hide any previous success message
+    const successMessageContainer = document.getElementById('analysis-success-message');
+    successMessageContainer.style.display = 'none';
+    
     const tracesInput = document.getElementById('traces-input').value;
     const yamlFile = document.getElementById('yaml-file').files[0];
 
@@ -48,6 +52,24 @@ function processInput() {
         });
 }
 
+function showAnalysisSuccessMessage(activityCount) {
+    const successMessageContainer = document.getElementById('analysis-success-message');
+    
+    successMessageContainer.innerHTML = `
+        <div class="alert alert-success">
+            <strong>✓ Analysis Complete!</strong> Successfully analyzed dependencies for ${activityCount} activities. 
+            You can now proceed with process redesign operations below.
+        </div>
+    `;
+    
+    successMessageContainer.style.display = 'block';
+    
+    // Auto-hide the message after 5 seconds
+    setTimeout(() => {
+        successMessageContainer.style.display = 'none';
+    }, 5000);
+}
+
 function fetchAndDisplayDependencies() {
     fetch('/api/matrix')
         .then(response => response.json())
@@ -65,6 +87,9 @@ function fetchAndDisplayDependencies() {
                 modifiedOption.disabled = true;
                 modifiedOption.textContent = 'Modified Dependencies';
                 populateLockSelections(data.activities);
+                
+                // Show success message
+                showAnalysisSuccessMessage(data.activities.length);
             } else {
                 alert(`Error: ${data.error}`);
             }
