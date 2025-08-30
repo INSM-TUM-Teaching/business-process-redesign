@@ -136,7 +136,7 @@ def format_matrix_display(matrix, diff_info=None, is_original=False):
     if not matrix:
         return {"activities": [], "matrix": {}, "diff_info": {}}
     
-    activities = matrix.activities
+    activities = sorted(matrix.activities)
     matrix_display = {}
     cell_classes = {}
     
@@ -547,17 +547,18 @@ def export_matrix():
         return jsonify({"success": False, "error": "No modified matrix available to export."})
     
     try:
+        sorted_activities = sorted(last_modified_matrix.activities)
         yaml_data = {
             "metadata": {
                 "format_version": "1.0",
                 "description": "Process adjacency matrix with temporal and existential dependencies",
-                "activities": last_modified_matrix.activities
+                "activities": sorted_activities
             },
             "dependencies": []
         }
         
-        for from_activity in last_modified_matrix.activities:
-            for to_activity in last_modified_matrix.activities:
+        for from_activity in sorted_activities:
+            for to_activity in sorted_activities:
                 if from_activity != to_activity:
                     dep_tuple = last_modified_matrix.get_dependency(from_activity, to_activity)
                     if dep_tuple:
