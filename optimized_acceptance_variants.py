@@ -84,13 +84,25 @@ def generate_optimized_acceptance_variants(adj_matrix: AdjacencyMatrix) -> List[
         for (src, tgt), dependency in existential_deps.items():
             if dependency.type == ExistentialType.INDEPENDENCE:
                 continue
-                
+
             src_idx = activity_to_idx[src]
             tgt_idx = activity_to_idx[tgt]
-            
+
             in_subset_src = (subset_bitset & (1 << src_idx)) > 0
             in_subset_tgt = (subset_bitset & (1 << tgt_idx)) > 0
-            
+
+            # Explicit fast-path checks for OR / EQUIVALENCE to avoid generic check cost
+            if dependency.type == ExistentialType.OR:
+                # At least one must be present
+                if not (in_subset_src or in_subset_tgt):
+                    return False
+                continue
+
+            if dependency.type == ExistentialType.EQUIVALENCE:
+                # Both present or both absent
+                if in_subset_src != in_subset_tgt:
+                    return False
+                continue
             if not check_existential_relationship(
                 in_subset_src, in_subset_tgt, dependency.type, dependency.direction
             ):
