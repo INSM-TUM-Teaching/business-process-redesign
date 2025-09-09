@@ -113,24 +113,25 @@ def insert_into_variants(
         raise ValueError(str(e)) from e
 
     temporal_deps, existential_deps = split_dependencies(dependencies)
+    total_temporal_deps, total_existential_deps = split_dependencies(total_dependencies)
 
     new_variants = []
 
     if satisfies_existential_constraints(
-        {activity}, new_activities, existential_deps
+        {activity}, new_activities, total_existential_deps
     ):
-        print(activity, existential_deps)
+        print(activity, total_existential_deps)
         new_variants.append([activity])
 
     for variant in variants:
         if satisfies_existential_constraints(
-            set(variant), new_activities, existential_deps
+            set(variant), new_activities, total_existential_deps
         ):
             new_variants.append(variant)
         variant_with_activity = variant.copy()
         variant_with_activity.append(activity)
         if not satisfies_existential_constraints(
-            set(variant_with_activity), new_activities, existential_deps
+            set(variant_with_activity), new_activities, total_existential_deps
         ):
             continue
         valid_variants = search_valid_positions_to_insert(

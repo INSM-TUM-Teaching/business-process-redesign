@@ -92,6 +92,9 @@ def generate_optimized_acceptance_variants(adj_matrix: AdjacencyMatrix) -> List[
                 continue
 
             if dependency.type == ExistentialType.OR:
+                # at least one must be present
+                if not (in_subset_src or in_subset_tgt):
+                    return False
                 continue
 
             if dependency.type == ExistentialType.EQUIVALENCE:
