@@ -194,16 +194,61 @@ function displayDependenciesComparison(originalData, modifiedData, elementId) {
     // Add detailed changes section (no Before/After sections)
     comparisonHtml += '<div class="detailed-changes">';
     comparisonHtml += '<h5>What Changed</h5>';
-    
+
     const changes = compareDepencencies(originalData, modifiedData);
-    if (changes.length === 0) {
-        comparisonHtml += '<div class="no-changes">No dependency changes detected.</div>';
-    } else {
+    // Show added activities and added cells explicitly if present in diff_info
+    const diffInfo = modifiedData.diff_info || {};
+    let hasChange = changes.length > 0;
+
+    // Show added activities
+    if (diffInfo.added_activities && diffInfo.added_activities.length > 0) {
+        hasChange = true;
+        diffInfo.added_activities.forEach(activity => {
+            comparisonHtml += `<div class="change-item added-activity">Added Activity: <strong>${activity}</strong></div>`;
+        });
+    }
+    // Show added cells (dependencies)
+    if (diffInfo.added_cells && diffInfo.added_cells.length > 0) {
+        hasChange = true;
+        diffInfo.added_cells.forEach(cell => {
+            const [from, to] = cell;
+            comparisonHtml += `<div class="change-item added">New Dependency: <strong>${from} → ${to}</strong></div>`;
+        });
+    }
+
+    // Show removed activities
+    if (diffInfo.removed_activities && diffInfo.removed_activities.length > 0) {
+        hasChange = true;
+        diffInfo.removed_activities.forEach(activity => {
+            comparisonHtml += `<div class="change-item removed-activity">Removed Activity: <strong>${activity}</strong></div>`;
+        });
+    }
+    // Show removed cells (dependencies)
+    if (diffInfo.removed_cells && diffInfo.removed_cells.length > 0) {
+        hasChange = true;
+        diffInfo.removed_cells.forEach(cell => {
+            const [from, to] = cell;
+            comparisonHtml += `<div class="change-item removed">Removed Dependency: <strong>${from} → ${to}</strong></div>`;
+        });
+    }
+    // Show modified cells (dependencies)
+    if (diffInfo.modified_cells && diffInfo.modified_cells.length > 0) {
+        hasChange = true;
+        diffInfo.modified_cells.forEach(cell => {
+            const [from, to] = cell;
+            comparisonHtml += `<div class="change-item modified">Modified Dependency: <strong>${from} → ${to}</strong></div>`;
+        });
+    }
+
+    // Show other changes from compareDepencencies
+    if (changes.length > 0) {
         changes.forEach(change => {
             comparisonHtml += `<div class="change-item ${change.type}">${change.details}</div>`;
         });
     }
-    
+    if (!hasChange) {
+        comparisonHtml += '<div class="no-changes">No dependency changes detected.</div>';
+    }
     comparisonHtml += '</div>'; // end detailed-changes
     
     // Add visual dependency graph section
@@ -1364,12 +1409,113 @@ function identifyDependencyType(cellContent) {
 }
 
 // Initialize page
+
+
+// --- BPMN Operations UI ---
+function fetchBpmnOperations() {
+    fetch('/api/bpmn_demo')
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                showBpmnOperations(data.operations);
+            }
+        });
+}
+
+function showBpmnOperations(operations) {
+    const listDiv = document.getElementById('bpmn-operations-list');
+    listDiv.innerHTML = '';
+    operations.forEach(op => {
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-outline-primary';
+        btn.style.margin = '0.5rem';
+        btn.textContent = `${op.id}. ${op.title}`;
+        btn.onclick = () => applyBpmnOperation(op);
+        listDiv.appendChild(btn);
+    });
+}
+
+function applyBpmnOperation(op) {
+    fetch('/api/matrix')
+        .then(res => res.json())
+        .then(data => {
+            const formData = new FormData();
+            formData.append('operation', op.formal_input.operation);
+            formData.append('matrix_source', 'original');
+            formData.append('locks', '[]'); // Use hardcoded locks in backend
+
+            // Fill in operation-specific fields
+            if (op.formal_input.operation === 'insert') {
+                formData.append('activity', op.formal_input.activity);
+                const deps = op.formal_input.dependencies;
+                formData.append('dependency_count', deps.length);
+                deps.forEach((dep, i) => {
+                    formData.append(`from_activity_${i}`, dep.from);
+                    formData.append(`to_activity_${i}`, dep.to);
+                    formData.append(`temporal_dep_${i}`, dep.temporal);
+                    formData.append(`temporal_direction_${i}`, 'FORWARD');
+                    formData.append(`existential_dep_${i}`, dep.existential);
+                    if (dep.existential_direction) {
+                        formData.append(`existential_direction_${i}`, dep.existential_direction);
+                    } else {
+                        formData.append(`existential_direction_${i}`, 'BOTH');
+                    }
+                });
+            } else if (op.formal_input.operation === 'delete') {
+                formData.append('activity', op.formal_input.activity);
+            } else if (op.formal_input.operation === 'modify') {
+                formData.append('from_activity', op.formal_input.from_activity);
+                formData.append('to_activity', op.formal_input.to_activity);
+                if (op.formal_input.temporal_dep) {
+                    formData.append('temporal_dep', op.formal_input.temporal_dep);
+                    formData.append('temporal_direction', 'FORWARD');
+                }
+                if (op.formal_input.existential_dep) {
+                    formData.append('existential_dep', op.formal_input.existential_dep);
+                    formData.append('existential_direction', 'BOTH');
+                }
+            } else if (op.formal_input.operation === 'move') {
+                formData.append('activity', op.formal_input.activity);
+                const deps = op.formal_input.dependencies;
+                formData.append('dependency_count', deps.length);
+                deps.forEach((dep, i) => {
+                    formData.append(`from_activity_${i}`, dep.from);
+                    formData.append(`to_activity_${i}`, dep.to);
+                    formData.append(`temporal_dep_${i}`, dep.temporal);
+                    formData.append(`temporal_direction_${i}`, 'FORWARD');
+                    formData.append(`existential_dep_${i}`, dep.existential);
+                    formData.append(`existential_direction_${i}`, 'BOTH');
+                });
+            } else if (op.formal_input.operation === 'skip') {
+                formData.append('activity_to_skip', op.formal_input.activity);
+            }
+
+            // Show operation details above result
+            const detailsDiv = document.getElementById('modified-dependencies-display');
+            detailsDiv.innerHTML = `<div class='alert alert-info'><strong>${op.id}. ${op.title}</strong><br>${op.description}<br><pre>${JSON.stringify(op.formal_input, null, 2)}</pre><span class='loading'></span> Applying operation...</div>`;
+
+            fetch('/api/change', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displayDependenciesComparison(data.original, data.modified, 'modified-dependencies-display');
+                    document.getElementById('export-button').style.display = 'inline-block';
+                } else {
+                    detailsDiv.innerHTML = `<div class='alert alert-danger'>Error: ${data.error}</div>`;
+                    document.getElementById('export-button').style.display = 'none';
+                }
+            })
+            .catch(error => {
+                detailsDiv.innerHTML = `<div class='alert alert-danger'>An unexpected error occurred.</div>`;
+                document.getElementById('export-button').style.display = 'none';
+            });
+        });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('change-operation-select').addEventListener('change', updateOperationInputs);
-    
-    // Initialize the "Modified Dependencies" option as disabled
-    const modifiedOption = document.querySelector('#dependencies-source-select option[value="modified"]');
-    modifiedOption.disabled = true;
-    
+    fetchBpmnOperations();
     console.log('Business Process Redesign Tool initialized');
 });

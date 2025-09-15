@@ -8,90 +8,17 @@
     <button class="tab active">Process Dependency Analysis</button>
 </div>
 
-<div id="dependency-analysis" class="tab-content active">
-    <div class="container">
-        <h2 class="section-title">Process Dependency Analysis</h2>
-        
-        <div class="grid grid-2">
-            <div class="card">
-                <h3 class="card-title">Input</h3>
-                <div class="form-group">
-                    <label class="form-label">Enter process traces (one per line, activities separated by commas):</label>
-                    <textarea class="form-control textarea" id="traces-input" placeholder="A,B,C,D&#10;A,C,B,D&#10;A,B,D"></textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Or upload process dependencies in YAML format:</label>
-                    <input type="file" class="form-control" id="yaml-file" accept=".yaml,.yml">
-                </div>
-                
-                <div class="btn-group">
-                    <button class="btn btn-primary" onclick="processInput()">Analyze Dependencies</button>
-                </div>
-                
-                <!-- Success message container -->
-                <div id="analysis-success-message" style="display: none;"></div>
-            </div>
-            
-            <div class="card">
-                <h3 class="card-title">Lock Dependencies</h3>
-                <div id="lock-dependencies" class="form-group">
-                    <div class="form-row">
-                        <select id="lock-from-activity" class="form-control" style="display: inline-block; width: 45%; margin-right: 5%;">
-                            <option value="">From Activity</option>
-                        </select>
-                        <select id="lock-to-activity" class="form-control" style="display: inline-block; width: 45%;">
-                            <option value="">To Activity</option>
-                        </select>
-                    </div>
-                    <div class="form-group" style="margin-top: 10px;">
-                        <label><input type="checkbox" id="lock-temporal"> Lock Temporal</label>
-                        <label style="margin-left: 20px;"><input type="checkbox" id="lock-existential"> Lock Existential</label>
-                    </div>
-                    <button type="button" class="btn btn-secondary" onclick="addLock()">Add Lock</button>
-                    <ul id="locks-list" style="margin-top: 10px; list-style: none; padding: 0;"></ul>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+
+
 
 <div id="change-operations" class="tab-content active" style="margin-top: 20px;">
     <div class="container">
         <h2 class="section-title">Process Redesign Operations</h2>
         <div class="grid grid-1">
             <div class="card">
-                <h3 class="card-title">Operation Configuration</h3>
-                <div class="form-group">
-                    <label class="form-label" for="dependencies-source-select">Apply Operation To:</label>
-                    <select id="dependencies-source-select" class="form-control">
-                        <option value="original">Initial Dependencies</option>
-                        <option value="modified">Modified Dependencies</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="change-operation-select">Select Change Operation:</label>
-                    <select id="change-operation-select" class="form-control">
-                        <option value="">--Please choose an operation--</option>
-                        <option value="delete">Delete Activity</option>
-                        <option value="insert">Insert Activity</option>
-                        <option value="collapse">Collapse Activities</option>
-                        <option value="de-collapse">De-collapse Activity</option>
-                        <option value="replace">Replace Activity</option>
-                        <option value="skip">Skip Activity</option>
-                        <option value="swap">Swap Activities</option>
-                        <option value="modify">Modify Dependency</option>
-                        <option value="move">Move Activity</option>
-                        <option value="parallelize">Parallelize Activities</option>
-                        <option value="condition_update">Conditional Update</option>
-                    </select>
-                </div>
-                <div id="operation-inputs"></div>
-                <div class="btn-group">
-                    <button class="btn btn-primary" onclick="performChangeOperation()">Perform Operation</button>
-                </div>
+                <h3 class="card-title">Choose a BPMN Change Operation</h3>
+                <div id="bpmn-operations-list"></div>
             </div>
-
         </div>
         <div class="grid grid-1" style="margin-top: 20px;">
             <div class="card">

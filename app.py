@@ -29,10 +29,107 @@ app.config['UPLOAD_FOLDER'] = 'temp_uploads'
 app.config['FREEZER_RELATIVE_URLS'] = True # Enable relative URLs for static files
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-current_matrix = None
-original_matrix = None
+# BPMN Demo
+BPMN_TRACES_PATH = os.path.join(os.path.dirname(__file__), 'sample-matrices', 'bpmn_traces.txt')
+BPMN_LOCKS = [
+    {'from': 'h', 'to': 'i', 'temporal': False, 'existential': True},
+    {'from': 'h', 'to': 'j', 'temporal': False, 'existential': True},
+    {'from': 'e', 'to': 'f', 'temporal': False, 'existential': True},
+    {'from': 'b', 'to': 'e', 'temporal': False, 'existential': True},
+]
 
+def load_bpmn_traces():
+    with open(BPMN_TRACES_PATH, 'r') as f:
+        traces = [line.strip().split(',') for line in f if line.strip()]
+    return traces
+
+def get_bpmn_matrix():
+    traces = load_bpmn_traces()
+    matrix = variants_to_matrix(traces)
+    return matrix
+
+def get_bpmn_locks():
+    return BPMN_LOCKS
+
+# Hardcoded BPMN operations
+BPMN_OPERATIONS = [
+    {
+        'id': 1,
+        'title': 'Insert activity c (ends process)',
+        'description': 'Insert a new activity c so that the process ends as soon as c is executed. c is exclusive to any other activity after a.',
+        'formal_input': {
+            'operation': 'insert',
+            'activity': 'c',
+            'dependencies': [
+                {'from': 'a', 'to': 'c', 'temporal': 'DIRECT', 'existential': 'IMPLICATION', 'existential_direction': 'BACKWARD'},
+                {'from': 'b', 'to': 'c', 'temporal': 'INDEPENDENCE', 'existential': 'NAND'},
+                {'from': 'd', 'to': 'c', 'temporal': 'INDEPENDENCE', 'existential': 'NAND'},
+                {'from': 'e', 'to': 'c', 'temporal': 'INDEPENDENCE', 'existential': 'NAND'},
+                {'from': 'f', 'to': 'c', 'temporal': 'INDEPENDENCE', 'existential': 'NAND'},
+                {'from': 'g', 'to': 'c', 'temporal': 'INDEPENDENCE', 'existential': 'NAND'},
+                {'from': 'h', 'to': 'c', 'temporal': 'INDEPENDENCE', 'existential': 'NAND'},
+                {'from': 'i', 'to': 'c', 'temporal': 'INDEPENDENCE', 'existential': 'NAND'},
+                {'from': 'j', 'to': 'c', 'temporal': 'INDEPENDENCE', 'existential': 'NAND'},
+            ]
+        }
+    },
+    {
+        'id': 2,
+        'title': 'Remove activity f',
+        'description': 'Remove activity f from the process.',
+        'formal_input': {
+            'operation': 'delete',
+            'activity': 'f'
+        }
+    },
+    {
+        'id': 3,
+        'title': 'Make h parallel to i',
+        'description': 'Modify the relationship between activities h and i so that h is executed in parallel with i.',
+        'formal_input': {
+            'operation': 'modify',
+            'from_activity': 'h',
+            'to_activity': 'i',
+            'temporal_dep': None,
+            'existential_dep': 'EQUIVALENCE'
+        }
+    },
+    {
+        'id': 4,
+        'title': 'Move h before b',
+        'description': 'Move activity h before activity b so that b is executed directly after a and directly before b. h does not have to follow a. Activities i and j always occur after h.',
+        'formal_input': {
+            'operation': 'move',
+            'activity': 'h',
+            'dependencies': [
+                {'from': 'h', 'to': 'b', 'temporal': 'DIRECT', 'existential': 'EQUIVALENCE'},
+                {'from': 'a', 'to': 'h', 'temporal': 'DIRECT', 'existential': 'IMPLICATION', 'existential_direction': 'BACKWARD'},
+                {'from': 'h', 'to': 'i', 'temporal': 'EVENTUAL', 'existential': 'EQUIVALENCE'},
+                {'from': 'h', 'to': 'j', 'temporal': 'EVENTUAL', 'existential': 'EQUIVALENCE'},
+            ]
+        }
+    },
+    {
+        'id': 5,
+        'title': 'Make e optional',
+        'description': 'Make the execution of activity e optional, i.e., skip e.',
+        'formal_input': {
+            'operation': 'skip',
+            'activity': 'e'
+        }
+    }
+]
+
+current_matrix = get_bpmn_matrix()
+original_matrix = get_bpmn_matrix()
 last_modified_matrix = None
+@app.route("/api/bpmn_demo", methods=["GET"])
+def bpmn_demo():
+    """Return hardcoded BPMN change operations for demonstration."""
+    return jsonify({
+        "success": True,
+        "operations": BPMN_OPERATIONS
+    })
 
 def calculate_matrix_diff(original_matrix, modified_matrix):
     """Calculate differences between two matrices for highlighting purposes."""
