@@ -9,7 +9,7 @@
     --text-secondary: #EBECEF;    /* lighter grey for better contrast */
     --text-muted: #AEB8C2;        /* light muted text for sufficient contrast */
     --border-color: #6A757E;      /* slightly lighter border for visual separation */
-    --success-color: #A2AD00;     /* TUM Green */
+    --success-color: #27AE60;     /* Brighter green for better contrast with yellow */
     --warning-color: #FFDC00;     /* TUM Yellow */
     --danger-color: #FF6B35;      /* Bold Orange instead of red */
     --info-color: #0065BD;        /* TUM Blue */
@@ -213,6 +213,134 @@ body {
     font-family: 'Courier New', monospace;
 }
 
+/* Dependency display styles */
+.dependencies-display {
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    padding: 1rem;
+    min-height: 200px;
+    overflow: auto;
+    border: 1px solid var(--border-color);
+}
+
+.dependencies-overview h4 {
+    color: var(--accent-secondary);
+    margin-bottom: 0.5rem;
+    font-size: 1.2rem;
+}
+
+.dependencies-explanation {
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+    font-style: italic;
+}
+
+.dependency-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.dependency-card {
+    background: var(--bg-tertiary);
+    border-radius: 6px;
+    padding: 1rem;
+    border-left: 4px solid var(--accent-primary);
+    transition: all 0.3s ease;
+}
+
+.dependency-card:hover {
+    background: #525a63;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    transform: translateY(-1px);
+}
+
+.dependency-pair {
+    font-weight: bold;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+}
+
+.dependency-pair strong {
+    color: var(--accent-secondary);
+}
+
+.dependency-explanation {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.temporal-dep {
+    color: #64A0C8;
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.existential-dep {
+    color: #A2AD00;
+    display: block;
+}
+
+.no-dep {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.activities-summary {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.activities-summary h5 {
+    color: var(--text-primary);
+    margin-bottom: 0.75rem;
+}
+
+.activities-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.activity-tag {
+    background: var(--accent-primary);
+    color: var(--text-primary);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    display: inline-block;
+}
+
+.activity-tag.diff-added-activity {
+    background: var(--success-color);
+}
+
+.activity-tag.diff-removed-activity {
+    background: var(--danger-color);
+    text-decoration: line-through;
+}
+
+.dependency-card.diff-added {
+    border-left-color: var(--success-color);
+    background: #1E8449; /* Use consistent darker green */
+}
+
+.dependency-card.diff-removed {
+    border-left-color: var(--danger-color);
+    background: #4a2d2d;
+    opacity: 0.7;
+}
+
+.dependency-card.diff-modified {
+    border-left-color: var(--warning-color);
+    background: #4a5d2d;
+}
+
+/* Matrix display styles (keeping for backward compatibility) */
 .matrix-display {
     background: var(--bg-primary);
     border-radius: 8px;
@@ -393,6 +521,12 @@ body {
     color: var(--danger-color);
 }
 
+.alert-success {
+    background: rgba(162, 173, 0, 0.15);
+    border-color: var(--success-color);
+    color: var(--success-color);
+}
+
 .loading {
     display: inline-block;
     width: 20px;
@@ -442,10 +576,10 @@ body {
     margin-top: 1.5rem;
 }
 
-/* Diff highlighting styles for matrix cells */
+/* Matrix diff highlighting styles - update for consistency */
 .matrix-table td.diff-added {
-    background-color: #2d5a2d !important; /* Dark green for added content */
-    border: 2px solid #4a9 !important;
+    background-color: #1E8449 !important; /* Use consistent green */
+    border: 2px solid #27AE60 !important;
     position: relative;
 }
 
@@ -462,8 +596,8 @@ body {
 }
 
 .matrix-table td.diff-added-activity {
-    background-color: #1f4a1f !important; /* Darker green for added activities */
-    border: 2px solid #27ae60 !important;
+    background-color: #1E8449 !important; /* Use consistent green */
+    border: 2px solid #27AE60 !important;
 }
 
 .matrix-table td.diff-removed-activity {
@@ -522,8 +656,8 @@ body {
 }
 
 .diff-legend-color.added {
-    background-color: #2d5a2d;
-    border-color: #4a9;
+    background-color: #1E8449; /* Darker shade of the brighter green */
+    border-color: #27AE60;
 }
 
 .diff-legend-color.removed {
@@ -537,8 +671,8 @@ body {
 }
 
 .diff-legend-color.added-activity {
-    background-color: #1f4a1f;
-    border-color: #27ae60;
+    background-color: #1E8449; /* Use consistent green */
+    border-color: #27AE60;
 }
 
 .diff-legend-color.removed-activity {
@@ -548,11 +682,240 @@ body {
 
 /* Header highlighting for added/removed activities */
 .matrix-table th.diff-added-activity {
-    background-color: #1f4a1f !important;
-    border: 2px solid #27ae60 !important;
+    background-color: #1E8449 !important; /* Use consistent green */
+    border: 2px solid #27AE60 !important;
 }
 
 .matrix-table th.diff-removed-activity {
     background-color: #4a1f1f !important;
     border: 2px solid #c0392b !important;
+}
+
+/* Dependencies Comparison Styles */
+.dependencies-comparison {
+    background: var(--bg-secondary);
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-top: 1rem;
+}
+
+.dependencies-comparison h4 {
+    color: var(--accent-secondary);
+    margin-bottom: 0.5rem;
+    font-size: 1.3rem;
+}
+
+.comparison-explanation {
+    color: var(--text-muted);
+    margin-bottom: 1.5rem;
+    font-style: italic;
+}
+
+.comparison-sections {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.comparison-section {
+    background: var(--bg-tertiary);
+    padding: 1rem;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+
+.before-section {
+    border-left: 4px solid var(--danger-color);
+}
+
+.after-section {
+    border-left: 4px solid var(--success-color);
+}
+
+.section-header {
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.dependencies-summary {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.dependency-item-compact {
+    background: var(--bg-primary);
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    border-left: 3px solid var(--accent-primary);
+}
+
+.no-dependencies {
+    color: var(--text-muted);
+    font-style: italic;
+    padding: 1rem;
+    text-align: center;
+}
+
+.detailed-changes {
+    background: var(--bg-tertiary);
+    padding: 1rem;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+
+.detailed-changes h5 {
+    color: var(--accent-secondary);
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+}
+
+.change-item {
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    border-left: 4px solid;
+}
+
+.change-item.added {
+    background: rgba(39, 174, 96, 0.15); /* Use brighter green with opacity */
+    border-left-color: var(--success-color);
+    color: var(--text-primary);
+}
+
+.change-item.removed {
+    background: rgba(255, 107, 53, 0.1);
+    border-left-color: var(--danger-color);
+    color: var(--text-primary);
+}
+
+.change-item.modified {
+    background: rgba(255, 220, 0, 0.1);
+    border-left-color: var(--warning-color);
+    color: var(--text-primary);
+}
+
+.change-item.added-activity {
+    background: rgba(39, 174, 96, 0.2); /* Use brighter green with higher opacity */
+    border-left-color: var(--success-color);
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.change-item.removed-activity {
+    background: rgba(255, 107, 53, 0.15);
+    border-left-color: var(--danger-color);
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.no-changes {
+    color: var(--text-muted);
+    font-style: italic;
+    padding: 1rem;
+    text-align: center;
+}
+
+/* Responsive design for comparison sections */
+@media (max-width: 768px) {
+    .comparison-sections {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+}
+
+/* Dependency graph styles */
+.dependency-graph-section {
+    background: var(--bg-tertiary);
+    padding: 1rem;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    margin-top: 1.5rem;
+}
+
+.dependency-graph-section h5 {
+    color: var(--accent-secondary);
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+}
+
+.dependency-graph-container {
+    width: 100%;
+    min-height: 400px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#dependency-graph {
+    width: 100%;
+    max-width: 800px;
+    height: auto;
+}
+
+/* Enhanced change item styles with better hover */
+.change-item {
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    border-left: 4px solid;
+    cursor: help;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.change-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateX(5px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* SVG node and edge hover effects */
+.activity-node {
+    cursor: pointer;
+    transition: filter 0.3s ease;
+}
+
+.activity-node:hover {
+    filter: brightness(1.2);
+}
+
+.dependency-edge {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.dependency-edge:hover {
+    stroke-width: 5;
+    filter: brightness(1.3);
+}
+
+.activity-label {
+    pointer-events: none;
+    user-select: none;
+}
+
+/* Graph legend styling */
+.graph-legend {
+    background: var(--bg-secondary);
+    padding: 0.5rem;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+}
+
+/* Responsive graph */
+@media (max-width: 768px) {
+    .dependency-graph-container {
+        min-height: 300px;
+    }
+    
+    #dependency-graph {
+        max-width: 100%;
+    }
 }

@@ -82,15 +82,26 @@ def generate_optimized_acceptance_variants(adj_matrix: AdjacencyMatrix) -> List[
         Uses bitset for faster operations.
         """
         for (src, tgt), dependency in existential_deps.items():
+            # Skip independence constraints early
             if dependency.type == ExistentialType.INDEPENDENCE:
                 continue
-                
             src_idx = activity_to_idx[src]
             tgt_idx = activity_to_idx[tgt]
-            
+
             in_subset_src = (subset_bitset & (1 << src_idx)) > 0
             in_subset_tgt = (subset_bitset & (1 << tgt_idx)) > 0
-            
+
+            # OR: require at least one present (refined behavior)
+            if dependency.type == ExistentialType.OR:
+                if not (in_subset_src or in_subset_tgt):
+                    return False
+                continue
+
+            # EQUIVALENCE: both present or both absent
+            if dependency.type == ExistentialType.EQUIVALENCE:
+                if in_subset_src != in_subset_tgt:
+                    return False
+                continue
             if not check_existential_relationship(
                 in_subset_src, in_subset_tgt, dependency.type, dependency.direction
             ):
@@ -213,6 +224,11 @@ def generate_optimized_acceptance_variants(adj_matrix: AdjacencyMatrix) -> List[
     
     # Define nested function for processing subsets of each size
     def process_subsets_of_size(size):
+        if size == 0:
+            if satisfies_existential_constraints_cached(0):
+                acceptance_variants.append([])
+            return
+
         if size == 1:
             # Single-element subsets are handled directly
             for i in range(n):
@@ -236,7 +252,7 @@ def generate_optimized_acceptance_variants(adj_matrix: AdjacencyMatrix) -> List[
     
     # Use a custom loop to process subsets in increasing size
     # This helps with memoization and pruning
-    for size in range(1, n + 1):
+    for size in range(0, n + 1):
         # Process subsets of each size separately to improve locality
         process_subsets_of_size(size)
 
