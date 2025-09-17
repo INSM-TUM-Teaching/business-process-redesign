@@ -16,8 +16,15 @@
         <h2 class="section-title">Process Redesign Operations</h2>
         <div class="grid grid-1">
             <div class="card">
-                <h3 class="card-title">Choose a BPMN Change Operation</h3>
-                <div id="bpmn-operations-list"></div>
+                <h3 class="card-title">Choose Change Operations</h3>
+                <div class="form-group">
+                    <label for="operation-type">Declare/BPMN:</label>
+                    <select id="operation-type" class="form-control">
+                        <option value="bpmn">BPMN</option>
+                        <option value="declare" selected>DECLARE</option>
+                    </select>
+                </div>
+                <div id="operations-list"></div>
             </div>
         </div>
         <div class="grid grid-1" style="margin-top: 20px;">

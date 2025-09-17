@@ -1411,38 +1411,49 @@ function identifyDependencyType(cellContent) {
 // Initialize page
 
 
-// --- BPMN Operations UI ---
-function fetchBpmnOperations() {
-    fetch('/api/bpmn_demo')
+function fetchOperations() {
+    const type = document.getElementById('operation-type').value;
+    const url = type === 'bpmn' ? '/api/bpmn_demo' : '/api/declare_demo';
+    fetch(url)
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                showBpmnOperations(data.operations);
+                showOperations(data.operations, type);
             }
         });
 }
 
-function showBpmnOperations(operations) {
-    const listDiv = document.getElementById('bpmn-operations-list');
+function showOperations(operations, type) {
+    const listDiv = document.getElementById('operations-list');
     listDiv.innerHTML = '';
     operations.forEach(op => {
         const btn = document.createElement('button');
         btn.className = 'btn btn-outline-primary';
         btn.style.margin = '0.5rem';
         btn.textContent = `${op.id}. ${op.title}`;
-        btn.onclick = () => applyBpmnOperation(op);
+        btn.onclick = () => applyOperation(op, type);
         listDiv.appendChild(btn);
     });
 }
 
-function applyBpmnOperation(op) {
+function applyOperation(op, type) {
     fetch('/api/matrix')
         .then(res => res.json())
         .then(data => {
             const formData = new FormData();
             formData.append('operation', op.formal_input.operation);
             formData.append('matrix_source', 'original');
-            formData.append('locks', '[]'); // Use hardcoded locks in backend
+            
+            if (type === 'declare') {
+                const DECLARE_LOCKS = [
+                    {from: 'h', to: 'i', temporal: true, existential: true},
+                    {from: 'e', to: 'f', temporal: true, existential: true},
+                    {from: 'b', to: 'd', temporal: true, existential: true},
+                ];
+                formData.append('locks', JSON.stringify(DECLARE_LOCKS));
+            } else {
+                formData.append('locks', '[]');
+            }
 
             // Fill in operation-specific fields
             if (op.formal_input.operation === 'insert') {
@@ -1516,6 +1527,7 @@ function applyBpmnOperation(op) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    fetchBpmnOperations();
+    fetchOperations();
+    document.getElementById('operation-type').addEventListener('change', fetchOperations);
     console.log('Business Process Redesign Tool initialized');
 });

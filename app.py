@@ -51,6 +51,27 @@ def get_bpmn_matrix():
 def get_bpmn_locks():
     return BPMN_LOCKS
 
+# DECLARE Demo
+DECLARE_TRACES_PATH = os.path.join(os.path.dirname(__file__), 'sample-matrices', 'declare_traces.txt')
+DECLARE_LOCKS = [
+    {'from': 'h', 'to': 'i', 'temporal': True, 'existential': True},
+    {'from': 'e', 'to': 'f', 'temporal': True, 'existential': True},
+    {'from': 'b', 'to': 'd', 'temporal': True, 'existential': True},
+]
+
+def load_declare_traces():
+    with open(DECLARE_TRACES_PATH, 'r') as f:
+        traces = [line.strip().split(',') for line in f if line.strip()]
+    return traces
+
+def get_declare_matrix():
+    traces = load_declare_traces()
+    matrix = variants_to_matrix(traces)
+    return matrix
+
+def get_declare_locks():
+    return DECLARE_LOCKS
+
 # Hardcoded BPMN operations
 BPMN_OPERATIONS = [
     {
@@ -120,8 +141,69 @@ BPMN_OPERATIONS = [
     }
 ]
 
-current_matrix = get_bpmn_matrix()
-original_matrix = get_bpmn_matrix()
+# Hardcoded DECLARE operations
+DECLARE_OPERATIONS = [
+    {
+        'id': 1,
+        'title': 'Insert activity c',
+        'description': 'Insert a new activity c so that the execution of activity f leads to the execution of c before or after f. If activity a and b occur, activity c should always occur afterward.',
+        'formal_input': {
+            'operation': 'insert',
+            'activity': 'c',
+            'dependencies': [
+                {'from': 'a', 'to': 'c', 'temporal': 'EVENTUAL', 'existential': 'IMPLICATION', 'existential_direction': 'BACKWARD'},
+                {'from': 'f', 'to': 'c', 'temporal': 'INDEPENDENCE', 'existential': 'IMPLICATION', 'existential_direction': 'FORWARD'},
+                {'from': 'b', 'to': 'c', 'temporal': 'EVENTUAL', 'existential': 'IMPLICATION', 'existential_direction': 'FORWARD'},
+            ]
+        }
+    },
+    {
+        'id': 2,
+        'title': 'Remove activity f',
+        'description': 'Remove activity f from the process.',
+        'formal_input': {
+            'operation': 'delete',
+            'activity': 'f'
+        }
+    },
+    {
+        'id': 3,
+        'title': 'Make h parallel to i',
+        'description': 'Modify the relationship between activities h and i so that h is executed in parallel with i.',
+        'formal_input': {
+            'operation': 'modify',
+            'from_activity': 'h',
+            'to_activity': 'i',
+            'temporal_dep': None,
+            'existential_dep': 'EQUIVALENCE'
+        }
+    },
+    {
+        'id': 4,
+        'title': 'Move a after b and d',
+        'description': 'Move activity a after activity b and d. Activity a has to occur directly after b whenever b occurs. Moreover, b and d require the existence of a in a trace in order to be executed.',
+        'formal_input': {
+            'operation': 'move',
+            'activity': 'a',
+            'dependencies': [
+                {'from': 'b', 'to': 'a', 'temporal': 'DIRECT', 'existential': 'IMPLICATION', 'existential_direction': 'FORWARD'},
+                {'from': 'a', 'to': 'd', 'temporal': 'EVENTUAL', 'existential': 'IMPLICATION', 'existential_direction': 'FORWARD'},
+            ]
+        }
+    },
+    {
+        'id': 5,
+        'title': 'Make a optional',
+        'description': 'Make the execution of activity a optional, i.e., skip a.',
+        'formal_input': {
+            'operation': 'skip',
+            'activity': 'a'
+        }
+    }
+]
+
+current_matrix = get_declare_matrix()
+original_matrix = get_declare_matrix()
 last_modified_matrix = None
 @app.route("/api/bpmn_demo", methods=["GET"])
 def bpmn_demo():
@@ -129,6 +211,14 @@ def bpmn_demo():
     return jsonify({
         "success": True,
         "operations": BPMN_OPERATIONS
+    })
+
+@app.route("/api/declare_demo", methods=["GET"])
+def declare_demo():
+    """Return hardcoded DECLARE change operations for demonstration."""
+    return jsonify({
+        "success": True,
+        "operations": DECLARE_OPERATIONS
     })
 
 def calculate_matrix_diff(original_matrix, modified_matrix):
