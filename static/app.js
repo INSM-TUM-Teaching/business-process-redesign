@@ -1446,13 +1446,19 @@ function applyOperation(op, type) {
             
             if (type === 'declare') {
                 const DECLARE_LOCKS = [
-                    {from: 'h', to: 'i', temporal: true, existential: true},
-                    {from: 'e', to: 'f', temporal: true, existential: true},
-                    {from: 'b', to: 'd', temporal: true, existential: true},
+                    {from: 'e', to: 'f', temporal: false, existential: true},
+                    {from: 'b', to: 'd', temporal: false, existential: true},
+                    {from: 'a', to: 'b', temporal: true, existential: true},
                 ];
                 formData.append('locks', JSON.stringify(DECLARE_LOCKS));
             } else {
-                formData.append('locks', '[]');
+                const BPMN_LOCKS = [
+                    {from: 'h', to: 'i', temporal: false, existential: true},
+                    {from: 'h', to: 'j', temporal: false, existential: true},
+                    {from: 'e', to: 'f', temporal: true, existential: true},
+                    {from: 'b', to: 'e', temporal: true, existential: true},
+                ];
+                formData.append('locks', JSON.stringify(BPMN_LOCKS));
             }
 
             // Fill in operation-specific fields

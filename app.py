@@ -34,8 +34,8 @@ BPMN_TRACES_PATH = os.path.join(os.path.dirname(__file__), 'sample-matrices', 'b
 BPMN_LOCKS = [
     {'from': 'h', 'to': 'i', 'temporal': False, 'existential': True},
     {'from': 'h', 'to': 'j', 'temporal': False, 'existential': True},
-    {'from': 'e', 'to': 'f', 'temporal': False, 'existential': True},
-    {'from': 'b', 'to': 'e', 'temporal': False, 'existential': True},
+    {'from': 'e', 'to': 'f', 'temporal': True, 'existential': True},
+    {'from': 'b', 'to': 'e', 'temporal': True, 'existential': True},
 ]
 
 def load_bpmn_traces():
@@ -54,9 +54,9 @@ def get_bpmn_locks():
 # DECLARE Demo
 DECLARE_TRACES_PATH = os.path.join(os.path.dirname(__file__), 'sample-matrices', 'declare_traces.txt')
 DECLARE_LOCKS = [
-    {'from': 'h', 'to': 'i', 'temporal': True, 'existential': True},
-    {'from': 'e', 'to': 'f', 'temporal': True, 'existential': True},
-    {'from': 'b', 'to': 'd', 'temporal': True, 'existential': True},
+    {'from': 'e', 'to': 'f', 'temporal': False, 'existential': True},
+    {'from': 'b', 'to': 'd', 'temporal': False, 'existential': True},
+    {'from': 'a', 'to': 'b', 'temporal': True, 'existential': True},
 ]
 
 def load_declare_traces():
@@ -180,14 +180,14 @@ DECLARE_OPERATIONS = [
     },
     {
         'id': 4,
-        'title': 'Move a after b and d',
-        'description': 'Move activity a after activity b and d. Activity a has to occur directly after b whenever b occurs. Moreover, b and d require the existence of a in a trace in order to be executed.',
+        'title': 'Move d before a',
+        'description': 'Move activity d before activity a. Activity d has to occur before activity a now. However, activity a can still occur without activity d being executed.',
         'formal_input': {
             'operation': 'move',
-            'activity': 'a',
+            'activity': 'd',
             'dependencies': [
-                {'from': 'b', 'to': 'a', 'temporal': 'DIRECT', 'existential': 'IMPLICATION', 'existential_direction': 'FORWARD'},
-                {'from': 'a', 'to': 'd', 'temporal': 'EVENTUAL', 'existential': 'IMPLICATION', 'existential_direction': 'FORWARD'},
+                {'from': 'd', 'to': 'a', 'temporal': 'EVENTUAL', 'existential': 'IMPLICATION', 'existential_direction': 'BACKWARD'},
+                {'from': 'b', 'to': 'd', 'temporal': 'INDEPENDENCE', 'existential': 'NEGATED_EQUIVALENCE'},
             ]
         }
     },
