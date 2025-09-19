@@ -38,26 +38,20 @@ def move_activity(
     except ValueError as e:
         raise ValueError(f"The input is invalid: {str(e)}") from e
     
-    # Create the result matrix from variants
     result_matrix = variants_to_matrix(new_variants, matrix.activities)
     
     # Override any inferred dependencies with the explicitly specified dependencies
-    # This ensures that the user's intended temporal relationship types are preserved
     for (source, target), (temp_dep, exist_dep) in dependencies.items():
         if temp_dep is not None or exist_dep is not None:
-            # Only update dependencies if both activities exist in the result matrix
             if source in result_matrix.activities and target in result_matrix.activities:
-                # Get current dependencies for this pair
                 current_temp, current_exist = result_matrix.dependencies.get((source, target), (None, None))
                 
-                # Use specified dependencies, keeping current ones where not specified
                 final_temp = temp_dep if temp_dep is not None else current_temp
                 final_exist = exist_dep if exist_dep is not None else current_exist
                 
-                # Update the matrix with the explicit dependencies
                 result_matrix.add_dependency(source, target, final_temp, final_exist)
                 
-                # Also update the reverse dependency to maintain consistency
+                # Also update the reverse dependency
                 # This ensures that if (d,a) = (EVENTUAL FORWARD, IMPLICATION FORWARD)
                 # then (a,d) = (EVENTUAL BACKWARD, IMPLICATION BACKWARD)
                 if target in result_matrix.activities and source in result_matrix.activities:
@@ -81,7 +75,6 @@ def move_activity(
                         else:  # Direction.BOTH
                             reverse_exist = ExistentialDependency(final_exist.type, Direction.BOTH)
                     
-                    # Update the reverse dependency
                     result_matrix.add_dependency(target, source, reverse_temp, reverse_exist)
     
     return result_matrix
