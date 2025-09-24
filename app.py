@@ -34,8 +34,8 @@ BPMN_TRACES_PATH = os.path.join(os.path.dirname(__file__), 'sample-matrices', 'b
 BPMN_LOCKS = [
     {'from': 'h', 'to': 'i', 'temporal': False, 'existential': True},
     {'from': 'h', 'to': 'j', 'temporal': False, 'existential': True},
-    {'from': 'e', 'to': 'f', 'temporal': True, 'existential': True},
-    {'from': 'b', 'to': 'e', 'temporal': True, 'existential': True},
+    {'from': 'e', 'to': 'f', 'temporal': True, 'existential': False},
+    {'from': 'b', 'to': 'e', 'temporal': True, 'existential': False},
 ]
 
 def load_bpmn_traces():

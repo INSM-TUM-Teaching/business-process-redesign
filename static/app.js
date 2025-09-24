@@ -1455,8 +1455,8 @@ function applyOperation(op, type) {
                 const BPMN_LOCKS = [
                     {from: 'h', to: 'i', temporal: false, existential: true},
                     {from: 'h', to: 'j', temporal: false, existential: true},
-                    {from: 'e', to: 'f', temporal: true, existential: true},
-                    {from: 'b', to: 'e', temporal: true, existential: true},
+                    {from: 'e', to: 'f', temporal: true, existential: false},
+                    {from: 'b', to: 'e', temporal: true, existential: false},
                 ];
                 formData.append('locks', JSON.stringify(BPMN_LOCKS));
             }
