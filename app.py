@@ -125,8 +125,8 @@ BPMN_OPERATIONS = [
             'dependencies': [
                 {'from': 'h', 'to': 'b', 'temporal': 'DIRECT', 'existential': 'EQUIVALENCE'},
                 {'from': 'a', 'to': 'h', 'temporal': 'DIRECT', 'existential': 'IMPLICATION', 'existential_direction': 'BACKWARD'},
-                {'from': 'h', 'to': 'i', 'temporal': 'EVENTUAL', 'existential': 'EQUIVALENCE'},
-                {'from': 'h', 'to': 'j', 'temporal': 'EVENTUAL', 'existential': 'EQUIVALENCE'},
+                {'from': 'h', 'to': 'i', 'temporal': 'EVENTUAL'},
+                {'from': 'h', 'to': 'j', 'temporal': 'EVENTUAL'},
             ]
         }
     },
@@ -584,6 +584,13 @@ def change_matrix():
             dependencies = {}
             dependency_count = int(request.form.get('dependency_count', 0))
             
+            # Get locks to preserve locked dependencies
+            locks = []
+            try:
+                locks = json.loads(request.form.get('locks', '[]'))
+            except Exception:
+                pass
+            
             for i in range(dependency_count):
                 from_activity = request.form.get(f'from_activity_{i}')
                 to_activity = request.form.get(f'to_activity_{i}')
@@ -596,13 +603,28 @@ def change_matrix():
                     temporal_dep = None
                     existential_dep = None
                     
+                    # Check if this dependency has locks
+                    dependency_lock = None
+                    for lock in locks:
+                        if lock.get('from') == from_activity and lock.get('to') == to_activity:
+                            dependency_lock = lock
+                            break
+                    
+                    # Get original dependency to preserve locked parts
+                    orig_dep = current_matrix.get_dependency(from_activity, to_activity)
+                    orig_temporal, orig_existential = orig_dep if orig_dep else (None, None)
+                    
                     if temporal_dep_str:
                         temporal_direction = Direction[temporal_direction_str] if temporal_direction_str else Direction.FORWARD
                         temporal_dep = TemporalDependency(TemporalType[temporal_dep_str], temporal_direction)
+                    elif dependency_lock and dependency_lock.get('temporal') and orig_temporal:
+                        temporal_dep = orig_temporal
                     
                     if existential_dep_str:
                         existential_direction = Direction[existential_direction_str] if existential_direction_str else Direction.FORWARD
                         existential_dep = ExistentialDependency(ExistentialType[existential_dep_str], existential_direction)
+                    elif dependency_lock and dependency_lock.get('existential') and orig_existential:
+                        existential_dep = orig_existential
                     
                     dependencies[(from_activity, to_activity)] = (temporal_dep, existential_dep)
             
@@ -631,11 +653,29 @@ def change_matrix():
                 new_dep = modified_matrix.get_dependency(frm, to)
                 orig_temporal, orig_existential = orig_dep if orig_dep else (None, None)
                 new_temporal, new_existential = new_dep if new_dep else (None, None)
+                
                 if temporal_lock:
-                    if (orig_temporal and new_temporal and (orig_temporal.type != new_temporal.type or orig_temporal.direction != new_temporal.direction)) or (bool(orig_temporal) != bool(new_temporal)):
+                    temporal_changed = False
+                    if orig_temporal != new_temporal:
+                        if bool(orig_temporal) != bool(new_temporal):
+                            temporal_changed = True
+                        elif orig_temporal and new_temporal:
+                            if orig_temporal.type != new_temporal.type or orig_temporal.direction != new_temporal.direction:
+                                temporal_changed = True
+                    
+                    if temporal_changed:
                         return jsonify({"success": False, "error": f"Temporal dependency from '{frm}' to '{to}' is locked and cannot be changed."})
+                
                 if existential_lock:
-                    if (orig_existential and new_existential and (orig_existential.type != new_existential.type or orig_existential.direction != new_existential.direction)) or (bool(orig_existential) != bool(new_existential)):
+                    existential_changed = False
+                    if orig_existential != new_existential:
+                        if bool(orig_existential) != bool(new_existential):
+                            existential_changed = True
+                        elif orig_existential and new_existential:
+                            if orig_existential.type != new_existential.type or orig_existential.direction != new_existential.direction:
+                                existential_changed = True
+                    
+                    if existential_changed:
                         return jsonify({"success": False, "error": f"Existential dependency from '{frm}' to '{to}' is locked and cannot be changed."})
             # Store the modified matrix for export
             last_modified_matrix = modified_matrix

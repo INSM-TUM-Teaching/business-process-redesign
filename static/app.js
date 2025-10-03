@@ -1498,10 +1498,14 @@ function applyOperation(op, type) {
                 deps.forEach((dep, i) => {
                     formData.append(`from_activity_${i}`, dep.from);
                     formData.append(`to_activity_${i}`, dep.to);
-                    formData.append(`temporal_dep_${i}`, dep.temporal);
-                    formData.append(`temporal_direction_${i}`, 'FORWARD');
-                    formData.append(`existential_dep_${i}`, dep.existential);
-                    formData.append(`existential_direction_${i}`, 'BOTH');
+                    if (dep.temporal) {
+                        formData.append(`temporal_dep_${i}`, dep.temporal);
+                        formData.append(`temporal_direction_${i}`, dep.temporal_direction || 'FORWARD');
+                    }
+                    if (dep.existential) {
+                        formData.append(`existential_dep_${i}`, dep.existential);
+                        formData.append(`existential_direction_${i}`, dep.existential_direction || 'BOTH');
+                    }
                 });
             } else if (op.formal_input.operation === 'skip') {
                 formData.append('activity_to_skip', op.formal_input.activity);
