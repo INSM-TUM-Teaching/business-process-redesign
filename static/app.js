@@ -1437,9 +1437,15 @@ function showOperations(operations, type) {
 }
 
 function applyOperation(op, type) {
-    fetch('/api/matrix')
+    const loadUrl = type === 'bpmn' ? '/api/load_bpmn_matrix' : '/api/load_declare_matrix';
+    
+    fetch(loadUrl, { method: 'POST' })
         .then(res => res.json())
-        .then(data => {
+        .then(loadResult => {
+            if (!loadResult.success) {
+                throw new Error('Failed to load matrix: ' + loadResult.error);
+            }
+            
             const formData = new FormData();
             formData.append('operation', op.formal_input.operation);
             formData.append('matrix_source', 'original');
@@ -1533,6 +1539,11 @@ function applyOperation(op, type) {
                 detailsDiv.innerHTML = `<div class='alert alert-danger'>An unexpected error occurred.</div>`;
                 document.getElementById('export-button').style.display = 'none';
             });
+        })
+        .catch(error => {
+            const detailsDiv = document.getElementById('modified-dependencies-display');
+            detailsDiv.innerHTML = `<div class='alert alert-danger'>Failed to load ${type.toUpperCase()} matrix: ${error.message}</div>`;
+            document.getElementById('export-button').style.display = 'none';
         });
 }
 

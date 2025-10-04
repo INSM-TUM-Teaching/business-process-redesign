@@ -221,6 +221,30 @@ def declare_demo():
         "operations": DECLARE_OPERATIONS
     })
 
+@app.route("/api/load_bpmn_matrix", methods=["POST"])
+def load_bpmn_matrix():
+    """Load the BPMN demo matrix as the current matrix."""
+    global current_matrix, original_matrix
+    
+    try:
+        original_matrix = get_bpmn_matrix()
+        current_matrix = copy.deepcopy(original_matrix)
+        return jsonify({"success": True, "message": "BPMN matrix loaded successfully."})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@app.route("/api/load_declare_matrix", methods=["POST"])
+def load_declare_matrix():
+    """Load the DECLARE demo matrix as the current matrix."""
+    global current_matrix, original_matrix
+    
+    try:
+        original_matrix = get_declare_matrix()
+        current_matrix = copy.deepcopy(original_matrix)
+        return jsonify({"success": True, "message": "DECLARE matrix loaded successfully."})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
 def calculate_matrix_diff(original_matrix, modified_matrix):
     """Calculate differences between two matrices for highlighting purposes."""
     diff_info = {
@@ -653,6 +677,8 @@ def change_matrix():
                 new_dep = modified_matrix.get_dependency(frm, to)
                 orig_temporal, orig_existential = orig_dep if orig_dep else (None, None)
                 new_temporal, new_existential = new_dep if new_dep else (None, None)
+                
+                print(f"[DEBUG] Lock validation for {frm}->{to}: orig_dep={orig_dep}, new_dep={new_dep}")
                 
                 if temporal_lock:
                     temporal_changed = False
