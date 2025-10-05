@@ -1454,7 +1454,7 @@ function applyOperation(op, type) {
                 const DECLARE_LOCKS = [
                     {from: 'e', to: 'f', temporal: false, existential: true},
                     {from: 'b', to: 'd', temporal: false, existential: true},
-                    {from: 'a', to: 'b', temporal: true, existential: true},
+                    {from: 'a', to: 'b', temporal: true, existential: false},
                 ];
                 formData.append('locks', JSON.stringify(DECLARE_LOCKS));
             } else {

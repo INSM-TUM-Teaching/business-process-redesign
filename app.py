@@ -56,7 +56,7 @@ DECLARE_TRACES_PATH = os.path.join(os.path.dirname(__file__), 'sample-matrices',
 DECLARE_LOCKS = [
     {'from': 'e', 'to': 'f', 'temporal': False, 'existential': True},
     {'from': 'b', 'to': 'd', 'temporal': False, 'existential': True},
-    {'from': 'a', 'to': 'b', 'temporal': True, 'existential': True},
+    {'from': 'a', 'to': 'b', 'temporal': True, 'existential': False},
 ]
 
 def load_declare_traces():
