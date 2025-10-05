@@ -76,8 +76,8 @@ def get_declare_locks():
 BPMN_OPERATIONS = [
     {
         'id': 1,
-        'title': 'Insert activity c (ends process)',
-        'description': 'Insert a new activity c so that the process ends as soon as c is executed. c is exclusive to any other activity after a.',
+        'title': 'Insert activity c',
+        'description': 'Insert a new activity c. c is exclusive to any other activity after a.',
         'formal_input': {
             'operation': 'insert',
             'activity': 'c',

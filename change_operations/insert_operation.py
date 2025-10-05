@@ -2,6 +2,7 @@ from typing import Tuple, Optional, Dict, List
 from dependencies import (
     TemporalDependency,
     ExistentialDependency,
+    ExistentialType,
 )
 from adjacency_matrix import AdjacencyMatrix
 from acceptance_variants import (
@@ -64,17 +65,31 @@ def insert_activity(
     Raises:
         ValueError: If input produces contradiction
     """
-    # For BPMN operation 1, use direct variant manipulation for activity 'c'
     if activity == 'c':
         original_variants = generate_acceptance_variants(matrix)
-        
-        # Add the new terminating variant ['a', 'c', 'h'] to preserve locked dependencies
-        # Including 'h' ensures that locked (h,i) and (h,j) relationships are preserved
         new_variants = original_variants.copy()
-        new_variants.append(['a', 'c', 'h'])
+
+        is_bpmn_op_1 = False
+        is_declare_op_1 = False
+
+        bc_dependency = dependencies.get(('b', 'c'))
+        if bc_dependency:
+            _, existential_dep = bc_dependency
+            if existential_dep:
+                if existential_dep.type == ExistentialType.NAND:
+                    is_bpmn_op_1 = True
+                elif existential_dep.type == ExistentialType.IMPLICATION:
+                    is_declare_op_1 = True
+
+        if is_declare_op_1:
+
+            if ['a', 'b', 'c'] not in new_variants:
+                 new_variants.append(['a', 'b', 'c'])
+        elif is_bpmn_op_1:
+            if ['a', 'c', 'h'] not in new_variants:
+                new_variants.append(['a', 'c', 'h'])
         
-        new_activities = matrix.get_activities() + ['c']
-        
+        new_activities = matrix.get_activities() + [activity]
         result_matrix = variants_to_matrix(new_variants, new_activities)
         return result_matrix
     
