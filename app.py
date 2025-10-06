@@ -76,6 +76,24 @@ def get_declare_locks():
 BPMN_OPERATIONS = [
     {
         'id': 1,
+        'title': 'Make e optional',
+        'description': 'Make the execution of activity e optional, i.e., skip e.',
+        'formal_input': {
+            'operation': 'skip',
+            'activity': 'e'
+        }
+    },
+    {
+        'id': 2,
+        'title': 'Remove activity f',
+        'description': 'Remove activity f from the process.',
+        'formal_input': {
+            'operation': 'delete',
+            'activity': 'f'
+        }
+    },
+    {
+        'id': 3,
         'title': 'Insert activity c',
         'description': 'Insert a new activity c. c is exclusive to any other activity after a.',
         'formal_input': {
@@ -95,16 +113,7 @@ BPMN_OPERATIONS = [
         }
     },
     {
-        'id': 2,
-        'title': 'Remove activity f',
-        'description': 'Remove activity f from the process.',
-        'formal_input': {
-            'operation': 'delete',
-            'activity': 'f'
-        }
-    },
-    {
-        'id': 3,
+        'id': 4,
         'title': 'Make h parallel to i',
         'description': 'Modify the relationship between activities h and i so that h is executed in parallel with i.',
         'formal_input': {
@@ -116,7 +125,7 @@ BPMN_OPERATIONS = [
         }
     },
     {
-        'id': 4,
+        'id': 5,
         'title': 'Move h before b',
         'description': 'Move activity h before activity b so that b is executed directly after a and directly before b. h does not have to follow a. Activities i and j always occur after h.',
         'formal_input': {
@@ -128,15 +137,6 @@ BPMN_OPERATIONS = [
                 {'from': 'h', 'to': 'i', 'temporal': 'EVENTUAL'},
                 {'from': 'h', 'to': 'j', 'temporal': 'EVENTUAL'},
             ]
-        }
-    },
-    {
-        'id': 5,
-        'title': 'Make e optional',
-        'description': 'Make the execution of activity e optional, i.e., skip e.',
-        'formal_input': {
-            'operation': 'skip',
-            'activity': 'e'
         }
     }
 ]
