@@ -1164,17 +1164,28 @@ function createDependencyGraph(originalData, modifiedData, changes) {
         }
     });
     
-    // Mark removed dependencies
+    // Mark removed dependencies (only if truly removed, not if became independent)
     originalDeps.forEach(dep => {
         const key = `${dep.from}-${dep.to}`;
         const edge = edgeMap.get(key);
         if (edge && !edge.modifiedExplanation) {
-            edge.type = 'removed';
+            const modifiedMatrix = modifiedData.matrix;
+            const modifiedCellContent = modifiedMatrix[dep.from] && modifiedMatrix[dep.from][dep.to];
+
+            if (!modifiedCellContent || modifiedCellContent === '') {
+                edge.type = 'removed';
+            } else if (modifiedCellContent === '-,-') {
+                edge.type = 'hidden';
+            }
         }
     });
     
     // Create edges
     edgeMap.forEach((edge, key) => {
+        if (edge.type === 'hidden') {
+            return;
+        }
+        
         const fromPos = nodePositions[edge.from];
         const toPos = nodePositions[edge.to];
         
