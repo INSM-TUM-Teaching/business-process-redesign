@@ -439,11 +439,27 @@ def change_matrix():
                 to = lock.get('to')
                 temporal_lock = lock.get('temporal')
                 existential_lock = lock.get('existential')
+                
+                # Check if either activity was deleted
+                frm_deleted = frm not in modified_matrix.get_activities()
+                to_deleted = to not in modified_matrix.get_activities()
+                activity_deleted = frm_deleted or to_deleted
+                
                 # Get original dep from source matrix
                 orig_dep = source_matrix_for_diff.get_dependency(frm, to)
                 new_dep = modified_matrix.get_dependency(frm, to)
                 orig_temporal, orig_existential = orig_dep if orig_dep else (None, None)
                 new_temporal, new_existential = new_dep if new_dep else (None, None)
+                
+                # Handle deletion case: temporal-only locks allow deletion, existential locks prevent it
+                if activity_deleted:
+                    if existential_lock:
+                        deleted_activity = frm if frm_deleted else to
+                        return jsonify({"success": False, "error": f"Activity '{deleted_activity}' cannot be deleted because existential dependency from '{frm}' to '{to}' is locked."})
+                    # Temporal-only lock allows deletion, so continue to next lock
+                    continue
+                
+                # Handle modification case (when activities still exist)
                 if temporal_lock:
                     if (orig_temporal and new_temporal and (orig_temporal.type != new_temporal.type or orig_temporal.direction != new_temporal.direction)) or (bool(orig_temporal) != bool(new_temporal)):
                         return jsonify({"success": False, "error": f"Temporal dependency from '{frm}' to '{to}' is locked and cannot be changed."})

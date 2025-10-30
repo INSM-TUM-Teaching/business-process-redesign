@@ -26,11 +26,13 @@ def locked_dependencies_preserved(initial_matrix: AdjacencyMatrix, modified_matr
         target_deleted = target not in modified_matrix.get_activities()
 
         # Handle deletion case for source activity
-        if source_deleted and source not in deletion_allowed:
+        # Only prevent deletion if existential lock is present (temporal-only locks allow deletion)
+        if source_deleted and source not in deletion_allowed and exist_locked:
             return False
         
         # Handle deletion case for target activity
-        if target_deleted and target not in deletion_allowed:
+        # Only prevent deletion if existential lock is present (temporal-only locks allow deletion)
+        if target_deleted and target not in deletion_allowed and exist_locked:
             return False
                 
         # Otherwise, check if the locked parts changed
@@ -80,15 +82,12 @@ def get_violated_locked_dependencies(
         target_deleted = target not in modified_matrix.get_activities()
 
         # Handle deletion case
+        # Temporal-only locks allow deletion, only existential locks prevent it
         if source_deleted and source not in deletion_allowed:
-            if temp_locked:
-                temporal_violated = True
             if exist_locked:
                 existential_violated = True
         
         if target_deleted and target not in deletion_allowed:
-            if temp_locked:
-                temporal_violated = True
             if exist_locked:
                 existential_violated = True
 
