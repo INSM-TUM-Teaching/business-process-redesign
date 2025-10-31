@@ -1,6 +1,19 @@
 from typing import List, Dict, Tuple
 from adjacency_matrix import AdjacencyMatrix
 from optimized_acceptance_variants import generate_optimized_acceptance_variants as generate_acceptance_variants
+from dependencies import TemporalType, ExistentialType
+
+
+def _dependencies_equal(dep1, dep2) -> bool:
+    """Check if two dependencies are equal, treating INDEPENDENCE as equivalent to None."""
+    is_independence_or_none_1 = dep1 is None or (hasattr(dep1, 'type') and dep1.type == TemporalType.INDEPENDENCE) or (hasattr(dep1, 'type') and dep1.type == ExistentialType.INDEPENDENCE)
+    is_independence_or_none_2 = dep2 is None or (hasattr(dep2, 'type') and dep2.type == TemporalType.INDEPENDENCE) or (hasattr(dep2, 'type') and dep2.type == ExistentialType.INDEPENDENCE)
+    
+    if is_independence_or_none_1 and is_independence_or_none_2:
+        return True
+    if is_independence_or_none_1 or is_independence_or_none_2:
+        return False
+    return dep1.type == dep2.type and dep1.direction == dep2.direction
 
 
 def locked_dependencies_preserved(initial_matrix: AdjacencyMatrix, modified_matrix: AdjacencyMatrix, locked_dependencies: Dict[Tuple[str, str], Tuple[bool, bool]], deletion_allowed: List[str]) -> bool:
@@ -25,29 +38,23 @@ def locked_dependencies_preserved(initial_matrix: AdjacencyMatrix, modified_matr
         source_deleted = source not in modified_matrix.get_activities()
         target_deleted = target not in modified_matrix.get_activities()
 
-        # Handle deletion case for source activity
-        # Only prevent deletion if existential lock is present (temporal-only locks allow deletion)
         if source_deleted and source not in deletion_allowed and exist_locked:
             return False
         
-        # Handle deletion case for target activity
-        # Only prevent deletion if existential lock is present (temporal-only locks allow deletion)
         if target_deleted and target not in deletion_allowed and exist_locked:
             return False
                 
-        # Otherwise, check if the locked parts changed
         if not source_deleted and not target_deleted:
             dependency = modified_matrix.get_dependency(source, target)
             if dependency is not None: 
                 modi_temp_dep, modi_exist_dep = dependency
                 temporal_dependency, existential_dependency = initial_dependencies.get((source, target), (None, None))
 
-                if temp_locked and modi_temp_dep != temporal_dependency:
+                if temp_locked and not _dependencies_equal(modi_temp_dep, temporal_dependency):
                     return False
-                if exist_locked and modi_exist_dep != existential_dependency:
+                if exist_locked and not _dependencies_equal(modi_exist_dep, existential_dependency):
                     return False
         
-    # if no violations were detected return true 
     return True
 
 
@@ -81,8 +88,6 @@ def get_violated_locked_dependencies(
         source_deleted = source not in modified_matrix.get_activities()
         target_deleted = target not in modified_matrix.get_activities()
 
-        # Handle deletion case
-        # Temporal-only locks allow deletion, only existential locks prevent it
         if source_deleted and source not in deletion_allowed:
             if exist_locked:
                 existential_violated = True
@@ -91,16 +96,15 @@ def get_violated_locked_dependencies(
             if exist_locked:
                 existential_violated = True
 
-        # Otherwise, check if the locked parts changed
         if not source_deleted and not target_deleted:
             dependency = modified_matrix.get_dependency(source, target)
             if dependency is not None:
                 modi_temp_dep, modi_exist_dep = dependency
                 temporal_dependency, existential_dependency = initial_dependencies.get((source, target), (None, None))
 
-                if temp_locked and modi_temp_dep != temporal_dependency:
+                if temp_locked and not _dependencies_equal(modi_temp_dep, temporal_dependency):
                     temporal_violated = True
-                if exist_locked and modi_exist_dep != existential_dependency:
+                if exist_locked and not _dependencies_equal(modi_exist_dep, existential_dependency):
                     existential_violated = True
 
         if temporal_violated or existential_violated:

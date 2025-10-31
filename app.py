@@ -34,6 +34,18 @@ original_matrix = None
 
 last_modified_matrix = None
 
+def dependencies_are_equal(dep1, dep2):
+    """Check if two dependencies are equal, treating INDEPENDENCE as equivalent to None."""
+    is_independence_or_none_1 = dep1 is None or (hasattr(dep1, 'type') and dep1.type == TemporalType.INDEPENDENCE) or (hasattr(dep1, 'type') and dep1.type == ExistentialType.INDEPENDENCE)
+    is_independence_or_none_2 = dep2 is None or (hasattr(dep2, 'type') and dep2.type == TemporalType.INDEPENDENCE) or (hasattr(dep2, 'type') and dep2.type == ExistentialType.INDEPENDENCE)
+    
+    if is_independence_or_none_1 and is_independence_or_none_2:
+        return True
+    if is_independence_or_none_1 or is_independence_or_none_2:
+        return False
+    return dep1.type == dep2.type and dep1.direction == dep2.direction
+
+
 def calculate_matrix_diff(original_matrix, modified_matrix):
     """Calculate differences between two matrices for highlighting purposes."""
     diff_info = {
@@ -440,31 +452,26 @@ def change_matrix():
                 temporal_lock = lock.get('temporal')
                 existential_lock = lock.get('existential')
                 
-                # Check if either activity was deleted
                 frm_deleted = frm not in modified_matrix.get_activities()
                 to_deleted = to not in modified_matrix.get_activities()
                 activity_deleted = frm_deleted or to_deleted
                 
-                # Get original dep from source matrix
                 orig_dep = source_matrix_for_diff.get_dependency(frm, to)
                 new_dep = modified_matrix.get_dependency(frm, to)
                 orig_temporal, orig_existential = orig_dep if orig_dep else (None, None)
                 new_temporal, new_existential = new_dep if new_dep else (None, None)
                 
-                # Handle deletion case: temporal-only locks allow deletion, existential locks prevent it
                 if activity_deleted:
                     if existential_lock:
                         deleted_activity = frm if frm_deleted else to
                         return jsonify({"success": False, "error": f"Activity '{deleted_activity}' cannot be deleted because existential dependency from '{frm}' to '{to}' is locked."})
-                    # Temporal-only lock allows deletion, so continue to next lock
                     continue
                 
-                # Handle modification case (when activities still exist)
                 if temporal_lock:
-                    if (orig_temporal and new_temporal and (orig_temporal.type != new_temporal.type or orig_temporal.direction != new_temporal.direction)) or (bool(orig_temporal) != bool(new_temporal)):
+                    if not dependencies_are_equal(orig_temporal, new_temporal):
                         return jsonify({"success": False, "error": f"Temporal dependency from '{frm}' to '{to}' is locked and cannot be changed."})
                 if existential_lock:
-                    if (orig_existential and new_existential and (orig_existential.type != new_existential.type or orig_existential.direction != new_existential.direction)) or (bool(orig_existential) != bool(new_existential)):
+                    if not dependencies_are_equal(orig_existential, new_existential):
                         return jsonify({"success": False, "error": f"Existential dependency from '{frm}' to '{to}' is locked and cannot be changed."})
             # Store the modified matrix for export
             last_modified_matrix = modified_matrix
