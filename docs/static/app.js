@@ -1,15 +1,16 @@
-// Global variables to store matrix data
-let originalMatrixData = null;
-let modifiedMatrixData = null;
+// Global variables to store dependency data
+let originalDependenciesData = null;
+let modifiedDependenciesData = null;
 
 let lockedDependencies = [];
 
 function processInput() {
+    // Hide any previous success message
+    const successMessageContainer = document.getElementById('analysis-success-message');
+    successMessageContainer.style.display = 'none';
+    
     const tracesInput = document.getElementById('traces-input').value;
     const yamlFile = document.getElementById('yaml-file').files[0];
-    const matrixDisplay = document.getElementById('matrix-display');
-
-    matrixDisplay.innerHTML = '<div class="alert alert-info"><span class="loading"></span> Processing...</div>';
 
     let fetchOptions;
 
@@ -32,7 +33,7 @@ function processInput() {
             body: JSON.stringify({ traces: traces })
         };
     } else {
-        matrixDisplay.innerHTML = '<div class="alert alert-warning">Please provide traces or upload a YAML file.</div>';
+        alert('Please provide traces or upload a YAML file.');
         return;
     }
 
@@ -40,108 +41,488 @@ function processInput() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                fetchAndDisplayMatrix();
+                fetchAndDisplayDependencies();
             } else {
-                matrixDisplay.innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
+                alert(`Error: ${data.error}`);
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            matrixDisplay.innerHTML = '<div class="alert alert-danger">An unexpected error occurred.</div>';
+            alert('An unexpected error occurred.');
         });
 }
 
-function fetchAndDisplayMatrix() {
-    const matrixDisplay = document.getElementById('matrix-display');
-    matrixDisplay.innerHTML = '<div class="alert alert-info"><span class="loading"></span> Fetching matrix...</div>';
+function showAnalysisSuccessMessage(activityCount) {
+    const successMessageContainer = document.getElementById('analysis-success-message');
+    
+    successMessageContainer.innerHTML = `
+        <div class="alert alert-success">
+            <strong>✓ Analysis Complete!</strong> Successfully analyzed dependencies for ${activityCount} activities. 
+            You can now proceed with process redesign operations below.
+        </div>
+    `;
+    
+    successMessageContainer.style.display = 'block';
+    
+    // Auto-hide the message after 5 seconds
+    setTimeout(() => {
+        successMessageContainer.style.display = 'none';
+    }, 5000);
+}
 
+function fetchAndDisplayDependencies() {
     fetch('/api/matrix')
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                originalMatrixData = data;
-                modifiedMatrixData = null; // Clear any previous modified matrix
+                originalDependenciesData = data;
+                modifiedDependenciesData = null; // Clear any previous modified dependencies
                 
-                displayMatrix(data, 'matrix-display');
-                displayMatrix(data, 'original-matrix-display');
-                document.getElementById('modified-matrix-display').innerHTML = '<div class="alert alert-info">The result of the operation will be displayed here.</div>';
+                document.getElementById('modified-dependencies-display').innerHTML = '<div class="alert alert-info">The result of the operation will be displayed here.</div>';
                 
-                // Reset matrix source selection to "original" and disable "modified" option
-                const matrixSourceSelect = document.getElementById('matrix-source-select');
-                matrixSourceSelect.value = 'original';
-                const modifiedOption = document.querySelector('#matrix-source-select option[value="modified"]');
+                // Reset dependencies source selection to "original" and disable "modified" option
+                const dependenciesSourceSelect = document.getElementById('dependencies-source-select');
+                dependenciesSourceSelect.value = 'original';
+                const modifiedOption = document.querySelector('#dependencies-source-select option[value="modified"]');
                 modifiedOption.disabled = true;
-                modifiedOption.textContent = 'Modified Matrix';
-                updateMatrixSourceTitle();
+                modifiedOption.textContent = 'Modified Dependencies';
                 populateLockSelections(data.activities);
+                
+                // Show success message
+                showAnalysisSuccessMessage(data.activities.length);
             } else {
-                document.getElementById('matrix-display').innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
+                alert(`Error: ${data.error}`);
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            document.getElementById('matrix-display').innerHTML = '<div class="alert alert-danger">Failed to fetch the matrix.</div>';
+            alert('Failed to analyze dependencies.');
         });
 }
 
-function displayMatrix(data, elementId) {
-    const matrixDisplay = document.getElementById(elementId);
+function displayDependencies(data, elementId) {
+    const dependenciesDisplay = document.getElementById(elementId);
     const activities = data.activities;
     const matrix = data.matrix;
     const cellClasses = data.cell_classes || {};
 
-    let tableHtml = '<table class="matrix-table"><tr><th></th>';
+    let dependenciesHtml = '<div class="dependencies-overview">';
+    dependenciesHtml += '<h4>Activity Dependencies</h4>';
+    dependenciesHtml += '<div class="dependencies-explanation">Below you can see how activities depend on each other in your process:</div>';
     
+    // Create a more user-friendly dependency list
+    let hasAnyDependencies = false;
+    let dependencyList = '<div class="dependency-list">';
+    
+    activities.forEach(fromActivity => {
+        activities.forEach(toActivity => {
+            if (fromActivity !== toActivity && matrix[fromActivity] && matrix[fromActivity][toActivity]) {
+                const cellContent = matrix[fromActivity][toActivity];
+                if (cellContent && cellContent !== '' && cellContent !== '-,-') {
+                    hasAnyDependencies = true;
+                    
+                    let dependencyHtml = '<div class="dependency-item">';
+                    dependencyHtml += `<div class="dependency-pair"><strong>${fromActivity}</strong> → <strong>${toActivity}</strong></div>`;
+                    
+                    // Parse the dependency notation and create user-friendly explanations
+                    const explanation = parseDependencyExplanation(cellContent, fromActivity, toActivity);
+                    dependencyHtml += `<div class="dependency-explanation">${explanation}</div>`;
+                    
+                    // Add diff classes if this is a comparison view
+                    let itemClass = '';
+                    if (data.diff_info) {
+                        if (data.diff_info.added_cells && data.diff_info.added_cells.some(cell => cell[0] === fromActivity && cell[1] === toActivity)) {
+                            itemClass = 'diff-added';
+                        } else if (data.diff_info.removed_cells && data.diff_info.removed_cells.some(cell => cell[0] === fromActivity && cell[1] === toActivity)) {
+                            itemClass = 'diff-removed';
+                        } else if (data.diff_info.modified_cells && data.diff_info.modified_cells.some(cell => cell[0] === fromActivity && cell[1] === toActivity)) {
+                            itemClass = 'diff-modified';
+                        }
+                    }
+                    
+                    dependencyHtml += `</div>`;
+                    dependencyList += `<div class="dependency-card ${itemClass}">${dependencyHtml}</div>`;
+                }
+            }
+        });
+    });
+    
+    dependencyList += '</div>';
+    
+    if (!hasAnyDependencies) {
+        dependenciesHtml += '<div class="alert alert-info">No specific dependencies found. All activities can be executed in any order.</div>';
+    } else {
+        dependenciesHtml += dependencyList;
+    }
+    
+    // Add activities list
+    dependenciesHtml += '<div class="activities-summary">';
+    dependenciesHtml += '<h5>Activities in your process:</h5>';
+    dependenciesHtml += '<div class="activities-list">';
     activities.forEach(activity => {
-        let headerClass = '';
+        let activityClass = '';
         if (data.diff_info) {
             if (data.diff_info.added_activities && data.diff_info.added_activities.includes(activity)) {
-                headerClass = 'diff-added-activity';
+                activityClass = 'diff-added-activity';
             } else if (data.diff_info.removed_activities && data.diff_info.removed_activities.includes(activity)) {
-                headerClass = 'diff-removed-activity';
+                activityClass = 'diff-removed-activity';
             }
         }
-        tableHtml += `<th class="${headerClass}">${activity}</th>`;
+        dependenciesHtml += `<span class="activity-tag ${activityClass}">${activity}</span>`;
     });
-    tableHtml += '</tr>';
-
-    activities.forEach(fromActivity => {
-        let rowHeaderClass = '';
-        if (data.diff_info) {
-            if (data.diff_info.added_activities && data.diff_info.added_activities.includes(fromActivity)) {
-                rowHeaderClass = 'diff-added-activity';
-            } else if (data.diff_info.removed_activities && data.diff_info.removed_activities.includes(fromActivity)) {
-                rowHeaderClass = 'diff-removed-activity';
-            }
-        }
-        tableHtml += `<tr><th class="${rowHeaderClass}">${fromActivity}</th>`;
-        
-        activities.forEach(toActivity => {
-            const cellClass = cellClasses[fromActivity] ? cellClasses[fromActivity][toActivity] || '' : '';
-            tableHtml += `<td class="${cellClass}">${matrix[fromActivity][toActivity] || ''}</td>`;
-        });
-        tableHtml += '</tr>';
-    });
-
-    tableHtml += '</table>';
+    dependenciesHtml += '</div></div>';
     
+    dependenciesHtml += '</div>';
+    
+    // Add legend if this is a diff view
     if (data.diff_info && (data.diff_info.added_activities.length > 0 || 
                           data.diff_info.removed_activities.length > 0 || 
                           data.diff_info.modified_cells.length > 0)) {
-        tableHtml += createDiffLegend(data.diff_info);
+        dependenciesHtml += createDiffLegend(data.diff_info);
     }
     
-    matrixDisplay.innerHTML = tableHtml;
+    dependenciesDisplay.innerHTML = dependenciesHtml;
+}
+
+function displayDependenciesComparison(originalData, modifiedData, elementId) {
+    const dependenciesDisplay = document.getElementById(elementId);
+    
+    let comparisonHtml = '<div class="dependencies-comparison">';
+    comparisonHtml += '<h4>Dependency Changes Overview</h4>';
+    comparisonHtml += '<div class="comparison-explanation">See what changed after the operation was performed:</div>';
+    
+    // Add detailed changes section (no Before/After sections)
+    comparisonHtml += '<div class="detailed-changes">';
+    comparisonHtml += '<h5>What Changed</h5>';
+
+    const changes = compareDepencencies(originalData, modifiedData);
+    // Show added activities and added cells explicitly if present in diff_info
+    const diffInfo = modifiedData.diff_info || {};
+    let hasChange = changes.length > 0;
+
+    // Show added activities
+    if (diffInfo.added_activities && diffInfo.added_activities.length > 0) {
+        hasChange = true;
+        diffInfo.added_activities.forEach(activity => {
+            comparisonHtml += `<div class="change-item added-activity">Added Activity: <strong>${activity}</strong></div>`;
+        });
+    }
+    // Show added cells (dependencies)
+    if (diffInfo.added_cells && diffInfo.added_cells.length > 0) {
+        hasChange = true;
+        diffInfo.added_cells.forEach(cell => {
+            const [from, to] = cell;
+            comparisonHtml += `<div class="change-item added">New Dependency: <strong>${from} → ${to}</strong></div>`;
+        });
+    }
+
+    // Show removed activities
+    if (diffInfo.removed_activities && diffInfo.removed_activities.length > 0) {
+        hasChange = true;
+        diffInfo.removed_activities.forEach(activity => {
+            comparisonHtml += `<div class="change-item removed-activity">Removed Activity: <strong>${activity}</strong></div>`;
+        });
+    }
+    // Show removed cells (dependencies)
+    if (diffInfo.removed_cells && diffInfo.removed_cells.length > 0) {
+        hasChange = true;
+        diffInfo.removed_cells.forEach(cell => {
+            const [from, to] = cell;
+            comparisonHtml += `<div class="change-item removed">Removed Dependency: <strong>${from} → ${to}</strong></div>`;
+        });
+    }
+    // Show modified cells (dependencies)
+    if (diffInfo.modified_cells && diffInfo.modified_cells.length > 0) {
+        hasChange = true;
+        diffInfo.modified_cells.forEach(cell => {
+            const [from, to] = cell;
+            comparisonHtml += `<div class="change-item modified">Modified Dependency: <strong>${from} → ${to}</strong></div>`;
+        });
+    }
+
+    // Show other changes from compareDepencencies
+    if (changes.length > 0) {
+        changes.forEach(change => {
+            comparisonHtml += `<div class="change-item ${change.type}">${change.details}</div>`;
+        });
+    }
+    if (!hasChange) {
+        comparisonHtml += '<div class="no-changes">No dependency changes detected.</div>';
+    }
+    comparisonHtml += '</div>'; // end detailed-changes
+    
+    // Add visual dependency graph section
+    comparisonHtml += '<div class="dependency-graph-section">';
+    comparisonHtml += '<h5>Visual Dependency Changes</h5>';
+    comparisonHtml += '<div class="dependency-graph-container">';
+    comparisonHtml += '<div id="dependency-graph"></div>';
+    comparisonHtml += '</div>';
+    comparisonHtml += '</div>'; // end dependency-graph-section
+    comparisonHtml += '</div>'; // end dependencies-comparison
+    
+    dependenciesDisplay.innerHTML = comparisonHtml;
+    
+    // Create the visual dependency graph after DOM is updated
+    if (changes.length > 0) {
+        createDependencyGraph(originalData, modifiedData, changes);
+    }
+}
+
+function getDependencyPairs(data) {
+    const dependencies = [];
+    const activities = data.activities;
+    const matrix = data.matrix;
+    
+    activities.forEach(fromActivity => {
+        activities.forEach(toActivity => {
+            if (fromActivity !== toActivity && matrix[fromActivity] && matrix[fromActivity][toActivity]) {
+                const cellContent = matrix[fromActivity][toActivity];
+                if (cellContent && cellContent !== '' && cellContent !== '-,-') {
+                    const explanation = parseDependencyExplanationCompact(cellContent, fromActivity, toActivity);
+                    const detailed = parseDependencyExplanation(cellContent, fromActivity, toActivity);
+                    dependencies.push({
+                        from: fromActivity,
+                        to: toActivity,
+                        content: cellContent,
+                        explanation: explanation,
+                        detailed: detailed
+                    });
+                }
+            }
+        });
+    });
+    
+    return dependencies;
+}
+
+function parseDependencyExplanationCompact(cellContent, fromActivity, toActivity) {
+    const parts = cellContent.split(',');
+    const temporalPart = parts[0] || '-';
+    const existentialPart = parts[1] || '-';
+    
+    let explanations = [];
+    
+    // Temporal dependency explanation (compact)
+    if (temporalPart !== '-') {
+        if (temporalPart.includes('≺')) {
+            if (temporalPart.includes('d')) {
+                explanations.push(`${fromActivity} directly before ${toActivity}`);
+            } else {
+                explanations.push(`${fromActivity} before ${toActivity}`);
+            }
+        } else if (temporalPart.includes('≻')) {
+            if (temporalPart.includes('d')) {
+                explanations.push(`${toActivity} directly before ${fromActivity}`);
+            } else {
+                explanations.push(`${toActivity} before ${fromActivity}`);
+            }
+        }
+    }
+    
+    // Existential dependency explanation (compact)
+    if (existentialPart !== '-') {
+        if (existentialPart === '=>') {
+            explanations.push(`if ${fromActivity} then ${toActivity}`);
+        } else if (existentialPart === '<=') {
+            explanations.push(`if ${toActivity} then ${fromActivity}`);
+        } else if (existentialPart === '⇔') {
+            explanations.push(`${fromActivity} and ${toActivity} together`);
+        } else if (existentialPart === '⇎') {
+            explanations.push(`${fromActivity} or ${toActivity}, not both`);
+        } else if (existentialPart === '∧') {
+            explanations.push(`${fromActivity} and ${toActivity} must occur`);
+        } else if (existentialPart === '⊼') {
+            explanations.push(`${fromActivity} and ${toActivity} cannot both occur`);
+        } else if (existentialPart === '∨') {
+            explanations.push(`${fromActivity} or ${toActivity} must occur`);
+        }
+    }
+    
+    return explanations.length > 0 ? explanations.join(', ') : 'no constraints';
+}
+
+function compareDepencencies(originalData, modifiedData) {
+    const changes = [];
+    
+    const originalDeps = getDependencyPairs(originalData);
+    const modifiedDeps = getDependencyPairs(modifiedData);
+    
+    // Helper function to check if two dependencies are of compatible types for modification
+    function areCompatibleTypes(type1, type2) {
+        const temporalTypes = ['Direct Forward Temporal', 'Eventual Forward Temporal', 'Direct Backward Temporal', 'Eventual Backward Temporal'];
+        const existentialTypes = ['Forward Implication', 'Backward Implication', 'Equivalence', 'Negated Equivalence', 'AND', 'NAND', 'OR'];
+        
+        // Check if both are temporal types
+        const type1IsTemporal = temporalTypes.some(temp => type1.includes(temp));
+        const type2IsTemporal = temporalTypes.some(temp => type2.includes(temp));
+        
+        // Check if both are existential types  
+        const type1IsExistential = existentialTypes.some(exist => type1.includes(exist));
+        const type2IsExistential = existentialTypes.some(exist => type2.includes(exist));
+        
+        // They are compatible if they are both temporal or both existential
+        return (type1IsTemporal && type2IsTemporal) || (type1IsExistential && type2IsExistential);
+    }
+    
+    // Helper function to check if a dependency is truly removed (not just became independence)
+    function isDependencyTrulyRemoved(originalDep, modifiedData) {
+        const modifiedMatrix = modifiedData.matrix;
+        const modifiedCellContent = modifiedMatrix[originalDep.from] && modifiedMatrix[originalDep.from][originalDep.to];
+        
+        // If the cell doesn't exist in modified matrix or is completely empty, it's truly removed
+        // If it's '-,-' (independence), it's not removed, just became independent
+        return !modifiedCellContent || modifiedCellContent === '';
+    }
+    
+    // Find removed dependencies (only when truly removed, not when becoming independent)
+    originalDeps.forEach(originalDep => {
+        if (isDependencyTrulyRemoved(originalDep, modifiedData)) {
+            const dependencyType = identifyDependencyType(originalDep.content);
+            changes.push({
+                type: 'removed',
+                description: `Removed: ${originalDep.from} → ${originalDep.to}`,
+                tooltip: `This dependency was completely removed.\n\nType: ${dependencyType}\nDescription: ${originalDep.explanation}`,
+                from: originalDep.from,
+                to: originalDep.to,
+                details: `Removed: ${originalDep.from} → ${originalDep.to} (was: ${dependencyType} - ${originalDep.explanation})`
+            });
+        }
+    });
+    
+    // Find added dependencies
+    modifiedDeps.forEach(modifiedDep => {
+        const originalMatrix = originalData.matrix;
+        const originalCellContent = originalMatrix[modifiedDep.from] && originalMatrix[modifiedDep.from][modifiedDep.to];
+        
+        // Only consider it added if it didn't exist before or was empty (not if it was independence)
+        if (!originalCellContent || originalCellContent === '') {
+            const dependencyType = identifyDependencyType(modifiedDep.content);
+            changes.push({
+                type: 'added',
+                description: `Added: ${modifiedDep.from} → ${modifiedDep.to}`,
+                tooltip: `This dependency was added.\n\nType: ${dependencyType}\nDescription: ${modifiedDep.explanation}`,
+                from: modifiedDep.from,
+                to: modifiedDep.to,
+                details: `Added: ${modifiedDep.from} → ${modifiedDep.to} (now: ${dependencyType} - ${modifiedDep.explanation})`
+            });
+        }
+    });
+    
+    // Find modified dependencies (only between compatible types)
+    originalDeps.forEach(originalDep => {
+        const modifiedDep = modifiedDeps.find(dep => 
+            dep.from === originalDep.from && dep.to === originalDep.to
+        );
+        if (modifiedDep && modifiedDep.content !== originalDep.content) {
+            const originalType = identifyDependencyType(originalDep.content);
+            const modifiedType = identifyDependencyType(modifiedDep.content);
+            
+            // Only show changes between compatible types
+            if (areCompatibleTypes(originalType, modifiedType)) {
+                changes.push({
+                    type: 'modified',
+                    description: `Modified: ${originalDep.from} → ${originalDep.to}`,
+                    tooltip: `This dependency was changed:\n\nWAS: ${originalType}\nNOW: ${modifiedType}\n\nBefore: ${originalDep.explanation}\nAfter: ${modifiedDep.explanation}`,
+                    from: originalDep.from,
+                    to: originalDep.to,
+                    details: `Modified: ${originalDep.from} → ${originalDep.to} (was: ${originalType} - ${originalDep.explanation} | now: ${modifiedType} - ${modifiedDep.explanation})`
+                });
+            }
+        }
+    });
+    
+    // Find removed activities
+    const originalActivities = originalData.activities;
+    const modifiedActivities = modifiedData.activities;
+    
+    originalActivities.forEach(activity => {
+        if (!modifiedActivities.includes(activity)) {
+            changes.push({
+                type: 'removed-activity',
+                description: `Activity "${activity}" removed`,
+                tooltip: `Activity "${activity}" was removed from the process`,
+                activity: activity,
+                details: `Removed: Activity "${activity}" was removed from the process`
+            });
+        }
+    });
+    
+    // Find added activities
+    modifiedActivities.forEach(activity => {
+        if (!originalActivities.includes(activity)) {
+            changes.push({
+                type: 'added-activity', 
+                description: `Activity "${activity}" added`,
+                tooltip: `Activity "${activity}" was added to the process`,
+                activity: activity,
+                details: `Added: Activity "${activity}" was added to the process`
+            });
+        }
+    });
+    
+    return changes;
+}
+
+function parseDependencyExplanation(cellContent, fromActivity, toActivity) {
+    // Parse the matrix notation and convert to user-friendly explanations
+    const parts = cellContent.split(',');
+    const temporalPart = parts[0] || '-';
+    const existentialPart = parts[1] || '-';
+    
+    let explanations = [];
+    
+    // Temporal dependency explanation
+    if (temporalPart !== '-') {
+        if (temporalPart.includes('≺')) {
+            if (temporalPart.includes('d')) {
+                explanations.push(`<span class="temporal-dep" title="This means ${fromActivity} must happen immediately before ${toActivity} with no other activities in between">Timing: <strong>${fromActivity}</strong> must happen directly before <strong>${toActivity}</strong></span>`);
+            } else {
+                explanations.push(`<span class="temporal-dep" title="This means ${fromActivity} must happen before ${toActivity}, but other activities can happen in between">Timing: <strong>${fromActivity}</strong> must happen before <strong>${toActivity}</strong></span>`);
+            }
+        } else if (temporalPart.includes('≻')) {
+            if (temporalPart.includes('d')) {
+                explanations.push(`<span class="temporal-dep" title="This means ${toActivity} must happen immediately before ${fromActivity} with no other activities in between">Timing: <strong>${toActivity}</strong> must happen directly before <strong>${fromActivity}</strong></span>`);
+            } else {
+                explanations.push(`<span class="temporal-dep" title="This means ${toActivity} must happen before ${fromActivity}, but other activities can happen in between">Timing: <strong>${toActivity}</strong> must happen before <strong>${fromActivity}</strong></span>`);
+            }
+        }
+    }
+    
+    // Existential dependency explanation  
+    if (existentialPart !== '-') {
+        if (existentialPart === '=>') {
+            explanations.push(`<span class="existential-dep" title="If ${fromActivity} occurs in a process instance, then ${toActivity} must also occur in that same instance">Occurrence: If <strong>${fromActivity}</strong> happens, then <strong>${toActivity}</strong> must also happen</span>`);
+        } else if (existentialPart === '<=') {
+            explanations.push(`<span class="existential-dep" title="If ${toActivity} occurs in a process instance, then ${fromActivity} must also occur in that same instance">Occurrence: If <strong>${toActivity}</strong> happens, then <strong>${fromActivity}</strong> must also happen</span>`);
+        } else if (existentialPart === '⇔') {
+            explanations.push(`<span class="existential-dep" title="Both activities must always occur together - either both happen or neither happens in any process instance">Occurrence: <strong>${fromActivity}</strong> and <strong>${toActivity}</strong> must both happen or both not happen</span>`);
+        } else if (existentialPart === '⇎') {
+            explanations.push(`<span class="existential-dep" title="These activities are mutually exclusive - only one can happen in any process instance">Occurrence: Either <strong>${fromActivity}</strong> or <strong>${toActivity}</strong> can happen, but not both</span>`);
+        } else if (existentialPart === '∧') {
+            explanations.push(`<span class="existential-dep" title="Both activities must occur together in every process instance">Occurrence: Both <strong>${fromActivity}</strong> and <strong>${toActivity}</strong> must happen together</span>`);
+        } else if (existentialPart === '⊼') {
+            explanations.push(`<span class="existential-dep" title="These activities cannot both occur in the same process instance">Occurrence: <strong>${fromActivity}</strong> and <strong>${toActivity}</strong> cannot both happen</span>`);
+        } else if (existentialPart === '∨') {
+            explanations.push(`<span class="existential-dep" title="At least one of these activities must occur in every process instance">Occurrence: At least one of <strong>${fromActivity}</strong> or <strong>${toActivity}</strong> must happen</span>`);
+        }
+    }
+    
+    if (explanations.length === 0) {
+        return `<span class="no-dep" title="These activities have no specific dependency constraints and can occur independently">No specific dependency constraint between these activities</span>`;
+    }
+    
+    return explanations.join('<br>');
 }
 
 function createDiffLegend(diffInfo) {
     let legendHtml = '<div class="diff-legend">';
+    legendHtml += '<h5 style="color: var(--text-primary); margin-bottom: 1rem;">Changes Overview:</h5>';
     
     if (diffInfo.added_activities.length > 0) {
         legendHtml += `
             <div class="diff-legend-item">
                 <div class="diff-legend-color added-activity"></div>
-                <span>Added Activities (${diffInfo.added_activities.length})</span>
+                <span>Added Activities (${diffInfo.added_activities.length}): ${diffInfo.added_activities.join(', ')}</span>
             </div>`;
     }
     
@@ -149,27 +530,27 @@ function createDiffLegend(diffInfo) {
         legendHtml += `
             <div class="diff-legend-item">
                 <div class="diff-legend-color removed-activity"></div>
-                <span>Removed Activities (${diffInfo.removed_activities.length})</span>
+                <span>Removed Activities (${diffInfo.removed_activities.length}): ${diffInfo.removed_activities.join(', ')}</span>
             </div>`;
     }
     
-    if (diffInfo.added_cells.length > 0) {
+    if (diffInfo.added_cells && diffInfo.added_cells.length > 0) {
         legendHtml += `
             <div class="diff-legend-item">
                 <div class="diff-legend-color added"></div>
-                <span>Added Dependencies</span>
+                <span>New Dependencies (${diffInfo.added_cells.length})</span>
             </div>`;
     }
     
-    if (diffInfo.removed_cells.length > 0) {
+    if (diffInfo.removed_cells && diffInfo.removed_cells.length > 0) {
         legendHtml += `
             <div class="diff-legend-item">
                 <div class="diff-legend-color removed"></div>
-                <span>Removed Dependencies</span>
+                <span>Removed Dependencies (${diffInfo.removed_cells.length})</span>
             </div>`;
     }
     
-    if (diffInfo.modified_cells.length > 0) {
+    if (diffInfo.modified_cells && diffInfo.modified_cells.length > 0) {
         legendHtml += `
             <div class="diff-legend-item">
                 <div class="diff-legend-color modified"></div>
@@ -226,7 +607,7 @@ function updateOperationInputs() {
                     <input type="text" id="collapsed_activity" class="form-control">
                 </div>
                 <div class="form-group">
-                    <label class="form-label" for="collapsed_matrix_file">Collapsed Matrix (YAML):</label>
+                    <label class="form-label" for="collapsed_dependencies_file">Collapsed Dependencies (YAML):</label>
                     <input type="file" id="collapsed_matrix_file" class="form-control" accept=".yaml,.yml">
                 </div>`;
             break;
@@ -535,10 +916,10 @@ function renderLocksList() {
 
 function performChangeOperation() {
     const operation = document.getElementById('change-operation-select').value;
-    const matrixSource = document.getElementById('matrix-source-select').value;
+    const dependenciesSource = document.getElementById('dependencies-source-select').value;
     const formData = new FormData();
     formData.append('operation', operation);
-    formData.append('matrix_source', matrixSource);
+    formData.append('matrix_source', dependenciesSource);
     // Append locks
     formData.append('locks', JSON.stringify(lockedDependencies));
 
@@ -637,13 +1018,11 @@ function performChangeOperation() {
             break;
     }
 
-    const originalMatrixDisplay = document.getElementById('original-matrix-display');
-    const modifiedMatrixDisplay = document.getElementById('modified-matrix-display');
+    const modifiedDependenciesDisplay = document.getElementById('modified-dependencies-display');
     
     document.getElementById('export-button').style.display = 'none';
     
-    originalMatrixDisplay.innerHTML = '<div class="alert alert-info"><span class="loading"></span> Performing operation...</div>';
-    modifiedMatrixDisplay.innerHTML = '<div class="alert alert-info"><span class="loading"></span> Performing operation...</div>';
+    modifiedDependenciesDisplay.innerHTML = '<div class="alert alert-info"><span class="loading"></span> Performing operation...</div>';
 
     fetch('/api/change', {
         method: 'POST',
@@ -652,39 +1031,30 @@ function performChangeOperation() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            modifiedMatrixData = data.modified;
+            modifiedDependenciesData = data.modified;
             
-            displayMatrix(data.original, 'original-matrix-display');
-            displayMatrix(data.modified, 'modified-matrix-display');
+            displayDependenciesComparison(data.original, data.modified, 'modified-dependencies-display');
             console.log('Diff Info:', data.diff_info);
             
-            const modifiedOption = document.querySelector('#matrix-source-select option[value="modified"]');
+            const modifiedOption = document.querySelector('#dependencies-source-select option[value="modified"]');
             modifiedOption.disabled = false;
-            modifiedOption.textContent = 'Modified Matrix (Available)';
-            
-            // Update the source matrix display if "modified" is currently selected
-            const matrixSource = document.getElementById('matrix-source-select').value;
-            if (matrixSource === 'modified') {
-                updateSourceMatrixDisplay('modified');
-            }
+            modifiedOption.textContent = 'Modified Dependencies (Available)';
             
             document.getElementById('export-button').style.display = 'inline-block';
         } else {
-            originalMatrixDisplay.innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
-            modifiedMatrixDisplay.innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
+            modifiedDependenciesDisplay.innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
             document.getElementById('export-button').style.display = 'none';
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        originalMatrixDisplay.innerHTML = '<div class="alert alert-danger">An unexpected error occurred.</div>';
-        modifiedMatrixDisplay.innerHTML = '<div class="alert alert-danger">An unexpected error occurred.</div>';
+        modifiedDependenciesDisplay.innerHTML = '<div class="alert alert-danger">An unexpected error occurred.</div>';
         // Hide export button on error
         document.getElementById('export-button').style.display = 'none';
     });
 }
 
-function exportModifiedMatrix() {
+function exportModifiedDependencies() {
     fetch('/api/export')
         .then(response => response.json())
         .then(data => {
@@ -706,95 +1076,498 @@ function exportModifiedMatrix() {
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('An error occurred while exporting the matrix.');
+            alert('An error occurred while exporting the dependencies.');
         });
 }
 
-function updateMatrixSourceTitle() {
-    const matrixSource = document.getElementById('matrix-source-select').value;
-    const titleElement = document.getElementById('source-matrix-title');
-    const modifiedOption = document.querySelector('#matrix-source-select option[value="modified"]');
+
+function createDependencyGraph(originalData, modifiedData, changes) {
+    const graphContainer = document.getElementById('dependency-graph');
+    if (!graphContainer) return;
     
-    if (matrixSource === 'modified') {
-        titleElement.textContent = 'Modified Matrix (Source)';
-        if (modifiedOption.disabled) {
-            // If modified option is disabled, reset to original
-            document.getElementById('matrix-source-select').value = 'original';
-            titleElement.textContent = 'Initial Matrix (Source)';
-            showMatrixSourceStatus('original');
-            updateSourceMatrixDisplay('original');
+    // Get all unique activities from both datasets
+    const allActivities = [...new Set([...originalData.activities, ...modifiedData.activities])];
+    
+    // Calculate graph dimensions
+    const containerWidth = graphContainer.offsetWidth || 800;
+    const containerHeight = Math.max(400, allActivities.length * 60);
+    const nodeRadius = 25;
+    const padding = 50;
+    
+    // Clear previous content
+    graphContainer.innerHTML = '';
+    
+    // Create SVG
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width', containerWidth);
+    svg.setAttribute('height', containerHeight);
+    svg.setAttribute('viewBox', `0 0 ${containerWidth} ${containerHeight}`);
+    svg.style.background = 'var(--bg-primary)';
+    svg.style.borderRadius = '8px';
+    svg.style.border = '1px solid var(--border-color)';
+    
+    // Calculate node positions in a circular layout
+    const centerX = containerWidth / 2;
+    const centerY = containerHeight / 2;
+    const radius = Math.min(centerX, centerY) - padding - nodeRadius;
+    
+    const nodePositions = {};
+    allActivities.forEach((activity, index) => {
+        const angle = (2 * Math.PI * index) / allActivities.length;
+        nodePositions[activity] = {
+            x: centerX + radius * Math.cos(angle),
+            y: centerY + radius * Math.sin(angle)
+        };
+    });
+    
+    // Create edges first (so they appear behind nodes)
+    const edgeElements = [];
+    
+    // Get all dependencies from both original and modified data
+    const originalDeps = getDependencyPairs(originalData);
+    const modifiedDeps = getDependencyPairs(modifiedData);
+    
+    // Create a map to track edge types
+    const edgeMap = new Map();
+    
+    // Process original dependencies
+    originalDeps.forEach(dep => {
+        const key = `${dep.from}-${dep.to}`;
+        edgeMap.set(key, {
+            from: dep.from,
+            to: dep.to,
+            originalExplanation: dep.explanation,
+            originalDetailed: dep.detailed || dep.explanation,
+            originalContent: dep.content,
+            type: 'existing'
+        });
+    });
+    
+    // Process modified dependencies
+    modifiedDeps.forEach(dep => {
+        const key = `${dep.from}-${dep.to}`;
+        if (edgeMap.has(key)) {
+            const existing = edgeMap.get(key);
+            existing.modifiedExplanation = dep.explanation;
+            existing.modifiedDetailed = dep.detailed || dep.explanation;
+            existing.modifiedContent = dep.content;
+            existing.type = existing.originalExplanation === dep.explanation ? 'existing' : 'modified';
         } else {
-            showMatrixSourceStatus('modified');
-            updateSourceMatrixDisplay('modified');
+            edgeMap.set(key, {
+                from: dep.from,
+                to: dep.to,
+                modifiedExplanation: dep.explanation,
+                modifiedDetailed: dep.detailed || dep.explanation,
+                modifiedContent: dep.content,
+                type: 'added'
+            });
         }
-    } else {
-        titleElement.textContent = 'Initial Matrix (Source)';
-        showMatrixSourceStatus('original');
-        updateSourceMatrixDisplay('original');
-    }
-}
-
-function updateSourceMatrixDisplay(matrixSource) {
-    const sourceDisplay = document.getElementById('original-matrix-display');
+    });
     
-    if (matrixSource === 'modified' && modifiedMatrixData) {
-        displayMatrix(modifiedMatrixData, 'original-matrix-display');
-    } else if (matrixSource === 'original' && originalMatrixData) {
-        displayMatrix(originalMatrixData, 'original-matrix-display');
-    } else {
-        sourceDisplay.innerHTML = '<div class="alert alert-info">Generate a matrix first to perform operations on it.</div>';
-    }
-}
+    // Mark removed dependencies (only if truly removed, not if became independent)
+    originalDeps.forEach(dep => {
+        const key = `${dep.from}-${dep.to}`;
+        const edge = edgeMap.get(key);
+        if (edge && !edge.modifiedExplanation) {
+            const modifiedMatrix = modifiedData.matrix;
+            const modifiedCellContent = modifiedMatrix[dep.from] && modifiedMatrix[dep.from][dep.to];
 
-function showMatrixSourceStatus(matrixSource) {
-    const statusMessages = {
-        'original': 'Using Initial Matrix as source for operation',
-        'modified': 'Using Modified Matrix as source for operation'
-    };
+            if (!modifiedCellContent || modifiedCellContent === '') {
+                edge.type = 'removed';
+            } else if (modifiedCellContent === '-,-') {
+                edge.type = 'hidden';
+            }
+        }
+    });
     
-    let statusElement = document.getElementById('matrix-source-status');
-    if (!statusElement) {
-        statusElement = document.createElement('div');
-        statusElement.id = 'matrix-source-status';
-        statusElement.className = 'alert alert-info';
-        statusElement.style.marginTop = '10px';
-        statusElement.style.fontSize = '0.9em';
+    // Create edges
+    edgeMap.forEach((edge, key) => {
+        if (edge.type === 'hidden') {
+            return;
+        }
         
-        const operationInputs = document.getElementById('operation-inputs');
-        if (operationInputs.nextSibling) {
-            operationInputs.parentNode.insertBefore(statusElement, operationInputs.nextSibling);
+        const fromPos = nodePositions[edge.from];
+        const toPos = nodePositions[edge.to];
+        
+        if (!fromPos || !toPos) return;
+        
+        // Calculate edge positions (from edge of circles, not centers)
+        const dx = toPos.x - fromPos.x;
+        const dy = toPos.y - fromPos.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const unitX = dx / distance;
+        const unitY = dy / distance;
+        
+        const startX = fromPos.x + unitX * nodeRadius;
+        const startY = fromPos.y + unitY * nodeRadius;
+        const endX = toPos.x - unitX * nodeRadius;
+        const endY = toPos.y - unitY * nodeRadius;
+        
+        // Create line element (no arrowheads)
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', startX);
+        line.setAttribute('y1', startY);
+        line.setAttribute('x2', endX);
+        line.setAttribute('y2', endY);
+        line.setAttribute('stroke-width', '3');
+        line.classList.add('dependency-edge', `edge-${edge.type}`);
+        
+        // Set color based on change type
+        let strokeColor;
+        switch (edge.type) {
+            case 'added':
+                strokeColor = '#27AE60'; // Brighter green for better contrast with yellow
+                break;
+            case 'removed':
+                strokeColor = '#FF6B35'; // Orange
+                break;
+            case 'modified':
+                strokeColor = '#FFDC00'; // TUM Yellow
+                break;
+            default:
+                strokeColor = '#6A757E'; // Muted grey for existing
+        }
+        line.setAttribute('stroke', strokeColor);
+        
+        // Add verbose hover tooltip
+        let tooltipText = '';
+        switch (edge.type) {
+            case 'added':
+                const addedType = identifyDependencyType(edge.modifiedContent);
+                tooltipText = `DEPENDENCY ADDED\n\nNew dependency: ${edge.from} ↔ ${edge.to}\nDependency Type: ${addedType}\n\nDetailed explanation:\n${createVerboseExplanation(edge.modifiedDetailed || edge.modifiedExplanation, edge.from, edge.to)}`;
+                break;
+            case 'removed':
+                const removedType = identifyDependencyType(edge.originalContent);
+                tooltipText = `DEPENDENCY REMOVED\n\nRemoved dependency: ${edge.from} ↔ ${edge.to}\nDependency Type: ${removedType}\n\nWhat was removed:\n${createVerboseExplanation(edge.originalDetailed || edge.originalExplanation, edge.from, edge.to)}`;
+                break;
+            case 'modified':
+                const originalType = identifyDependencyType(edge.originalContent);
+                const modifiedType = identifyDependencyType(edge.modifiedContent);
+                tooltipText = `DEPENDENCY MODIFIED\n\nChanged dependency: ${edge.from} ↔ ${edge.to}\n\nWAS: ${originalType}\nNOW: ${modifiedType}\n\nBefore:\n${createVerboseExplanation(edge.originalDetailed || edge.originalExplanation, edge.from, edge.to)}\n\nAfter:\n${createVerboseExplanation(edge.modifiedDetailed || edge.modifiedExplanation, edge.from, edge.to)}`;
+                break;
+            default:
+                const existingType = identifyDependencyType(edge.originalContent || edge.modifiedContent);
+                tooltipText = `UNCHANGED DEPENDENCY\n\nExisting dependency: ${edge.from} ↔ ${edge.to}\nDependency Type: ${existingType}\n\nExplanation:\n${createVerboseExplanation(edge.originalDetailed || edge.originalExplanation || edge.modifiedDetailed || edge.modifiedExplanation, edge.from, edge.to)}`;
+        }
+        
+        line.innerHTML = `<title>${tooltipText}</title>`;
+        
+        svg.appendChild(line);
+        edgeElements.push(line);
+    });
+    
+    // Create nodes (on top of edges)
+    allActivities.forEach(activity => {
+        const pos = nodePositions[activity];
+        const isRemoved = !modifiedData.activities.includes(activity);
+        const isAdded = !originalData.activities.includes(activity);
+        
+        // Create circle
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('cx', pos.x);
+        circle.setAttribute('cy', pos.y);
+        circle.setAttribute('r', nodeRadius);
+        circle.classList.add('activity-node');
+        
+        // Set colors based on activity status
+        if (isAdded) {
+            circle.setAttribute('fill', '#27AE60');
+            circle.setAttribute('stroke', '#1E8449');
+        } else if (isRemoved) {
+            circle.setAttribute('fill', '#FF6B35');
+            circle.setAttribute('stroke', '#CC5429');
         } else {
-            operationInputs.parentNode.appendChild(statusElement);
+            circle.setAttribute('fill', '#0065BD');
+            circle.setAttribute('stroke', '#004A8C');
+        }
+        circle.setAttribute('stroke-width', '2');
+        
+        // Add activity label
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', pos.x);
+        text.setAttribute('y', pos.y + 5);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('fill', '#FFFFFF');
+        text.setAttribute('font-family', 'Arial, sans-serif');
+        text.setAttribute('font-weight', 'bold');
+        text.setAttribute('font-size', '12');
+        text.textContent = activity;
+        text.classList.add('activity-label');
+        
+        // Add tooltip for activity status
+        let activityTooltip = `ACTIVITY: ${activity}`;
+        if (isAdded) activityTooltip += '\n\nSTATUS: This activity was added to the process';
+        else if (isRemoved) activityTooltip += '\n\nSTATUS: This activity was removed from the process';
+        else activityTooltip += '\n\nSTATUS: This activity remains unchanged in the process';
+        
+        circle.innerHTML = `<title>${activityTooltip}</title>`;
+        
+        svg.appendChild(circle);
+        svg.appendChild(text);
+    });
+    
+    // Add legend
+    const legend = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    legend.setAttribute('transform', 'translate(10, 10)');
+    
+    const legendItems = [
+        { color: '#27AE60', label: 'Added', type: 'edge' },
+        { color: '#FF6B35', label: 'Removed', type: 'edge' },
+        { color: '#FFDC00', label: 'Modified', type: 'edge' },
+        { color: '#6A757E', label: 'Unchanged', type: 'edge' }
+    ];
+    
+    legendItems.forEach((item, index) => {
+        const y = index * 20;
+        
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', 0);
+        line.setAttribute('y1', y + 10);
+        line.setAttribute('x2', 20);
+        line.setAttribute('y2', y + 10);
+        line.setAttribute('stroke', item.color);
+        line.setAttribute('stroke-width', '3');
+        legend.appendChild(line);
+        
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', 25);
+        text.setAttribute('y', y + 14);
+        text.setAttribute('fill', '#FFFFFF');
+        text.setAttribute('font-family', 'Arial, sans-serif');
+        text.setAttribute('font-size', '12');
+        text.textContent = item.label;
+        legend.appendChild(text);
+    });
+    
+    svg.appendChild(legend);
+    graphContainer.appendChild(svg);
+}
+
+// Create verbose explanation for tooltips
+function createVerboseExplanation(explanation, fromActivity, toActivity) {
+    // If explanation already contains HTML or detailed text, strip HTML and use it
+    if (explanation && (explanation.includes('must happen') || explanation.includes('Timing:') || explanation.includes('Occurrence:'))) {
+        // Strip HTML tags and extract the meaningful text
+        return explanation.replace(/<[^>]*>/g, '').replace(/&[^;]+;/g, ' ').trim();
+    }
+    
+    // If it's a compact explanation, try to expand it based on patterns
+    if (explanation && explanation.includes('directly before')) {
+        return `${fromActivity} must happen immediately before ${toActivity} with no other activities in between.\n\nThis is a DIRECT TEMPORAL DEPENDENCY that enforces strict ordering.`;
+    } else if (explanation && explanation.includes(' before ')) {
+        return `${fromActivity} must happen before ${toActivity}, but other activities can happen in between.\n\nThis is an EVENTUAL TEMPORAL DEPENDENCY that allows flexibility in execution.`;
+    } else if (explanation && explanation.includes('if') && explanation.includes('then')) {
+        return `If ${fromActivity} occurs in a process instance, then ${toActivity} must also occur in that same instance.\n\nThis is an IMPLICATION DEPENDENCY that links the existence of these activities.`;
+    } else if (explanation && explanation.includes('both happen or both not happen')) {
+        return `${fromActivity} and ${toActivity} must always occur together - either both happen or neither happens in any process instance.\n\nThis is an EQUIVALENCE DEPENDENCY that ensures mutual occurrence.`;
+    } else if (explanation && explanation.includes('cannot both occur')) {
+        return `${fromActivity} and ${toActivity} cannot both occur in the same process instance.\n\nThis is a NAND DEPENDENCY that prevents simultaneous execution.`;
+    } else if (explanation && explanation.includes('and') && explanation.includes('must occur')) {
+        return `Both ${fromActivity} and ${toActivity} must occur together in every process instance.\n\nThis is an AND DEPENDENCY that requires both activities.`;
+    } else if (explanation && explanation.includes('or') && explanation.includes('must occur')) {
+        return `At least one of ${fromActivity} or ${toActivity} must occur in every process instance.\n\nThis is an OR DEPENDENCY that requires at least one activity.`;
+    } else if (explanation && explanation.includes('not both')) {
+        return `Either ${fromActivity} or ${toActivity} can happen, but not both.\n\nThis is a MUTUAL EXCLUSION DEPENDENCY that allows only one activity.`;
+    }
+    
+    // Fallback for any other explanation
+    return explanation || 'No specific dependency constraint between these activities - they can occur independently.';
+}
+
+// Function to identify formal dependency type from cell content
+function identifyDependencyType(cellContent) {
+    if (!cellContent || cellContent === '-,-') return 'No constraint';
+    
+    const parts = cellContent.split(',');
+    const temporalPart = parts[0] || '-';
+    const existentialPart = parts[1] || '-';
+    
+    let types = [];
+    
+    // Identify temporal dependency type
+    if (temporalPart !== '-') {
+        if (temporalPart.includes('≺d')) {
+            types.push('Direct Forward Temporal');
+        } else if (temporalPart.includes('≺')) {
+            types.push('Eventual Forward Temporal');
+        } else if (temporalPart.includes('≻d')) {
+            types.push('Direct Backward Temporal');
+        } else if (temporalPart.includes('≻')) {
+            types.push('Eventual Backward Temporal');
         }
     }
     
-    statusElement.textContent = statusMessages[matrixSource] || '';
-    statusElement.style.display = matrixSource ? 'block' : 'none';
-}
-
-function updateSourceMatrixDisplay(matrixSource) {
-    const originalMatrixDisplay = document.getElementById('original-matrix-display');
-    const modifiedMatrixDisplay = document.getElementById('modified-matrix-display');
-    
-    if (matrixSource === 'original' && originalMatrixData) {
-        displayMatrix(originalMatrixData, 'original-matrix-display');
-    } else if (matrixSource === 'modified' && modifiedMatrixData) {
-        displayMatrix(modifiedMatrixData, 'modified-matrix-display');
+    // Identify existential dependency type
+    if (existentialPart !== '-') {
+        if (existentialPart === '=>') {
+            types.push('Forward Implication');
+        } else if (existentialPart === '<=') {
+            types.push('Backward Implication');
+        } else if (existentialPart === '⇔') {
+            types.push('Equivalence');
+        } else if (existentialPart === '⇎') {
+            types.push('Negated Equivalence');
+        } else if (existentialPart === '∧') {
+            types.push('AND');
+        } else if (existentialPart === '⊼') {
+            types.push('NAND');
+        } else if (existentialPart === '∨') {
+            types.push('OR');
+        }
     }
+    
+    return types.length > 0 ? types.join(' + ') : 'No constraint';
 }
 
 // Initialize page
-document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('change-operation-select').addEventListener('change', updateOperationInputs);
-    document.getElementById('matrix-source-select').addEventListener('change', () => {
-        updateMatrixSourceTitle();
-        showMatrixSourceStatus(document.getElementById('matrix-source-select').value);
+
+
+function fetchOperations() {
+    const type = document.getElementById('operation-type').value;
+    const url = type === 'bpmn' ? '/api/bpmn_demo' : '/api/declare_demo';
+    fetch(url)
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                showOperations(data.operations, type);
+            }
+        });
+}
+
+function showOperations(operations, type) {
+    const listDiv = document.getElementById('operations-list');
+    listDiv.innerHTML = '';
+    operations.forEach(op => {
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-outline-primary';
+        btn.style.margin = '0.5rem';
+        btn.textContent = `${op.id}. ${op.title}`;
+        btn.onclick = () => applyOperation(op, type);
+        listDiv.appendChild(btn);
     });
+}
+
+function applyOperation(op, type) {
+    const loadUrl = type === 'bpmn' ? '/api/load_bpmn_matrix' : '/api/load_declare_matrix';
     
-    // Initialize the "Modified Matrix" option as disabled
-    const modifiedOption = document.querySelector('#matrix-source-select option[value="modified"]');
-    modifiedOption.disabled = true;
-    updateMatrixSourceTitle();
-    
+    fetch(loadUrl, { method: 'POST' })
+        .then(res => res.json())
+        .then(loadResult => {
+            if (!loadResult.success) {
+                throw new Error('Failed to load matrix: ' + loadResult.error);
+            }
+            
+            const formData = new FormData();
+            formData.append('operation', op.formal_input.operation);
+            formData.append('matrix_source', 'original');
+            
+            if (type === 'declare') {
+                const DECLARE_LOCKS = [
+                    {from: 'e', to: 'f', temporal: false, existential: true},
+                    {from: 'b', to: 'd', temporal: false, existential: true},
+                    {from: 'a', to: 'b', temporal: true, existential: false},
+                ];
+                formData.append('locks', JSON.stringify(DECLARE_LOCKS));
+            } else {
+                const BPMN_LOCKS = [
+                    {from: 'h', to: 'i', temporal: false, existential: true},
+                    {from: 'h', to: 'j', temporal: false, existential: true},
+                    {from: 'e', to: 'f', temporal: true, existential: false},
+                    {from: 'b', to: 'e', temporal: true, existential: false},
+                ];
+                formData.append('locks', JSON.stringify(BPMN_LOCKS));
+            }
+
+            // Fill in operation-specific fields
+            if (op.formal_input.operation === 'insert') {
+                formData.append('activity', op.formal_input.activity);
+                const deps = op.formal_input.dependencies;
+                formData.append('dependency_count', deps.length);
+                deps.forEach((dep, i) => {
+                    formData.append(`from_activity_${i}`, dep.from);
+                    formData.append(`to_activity_${i}`, dep.to);
+                    // Only append temporal dependency if it's not INDEPENDENCE
+                    if (dep.temporal && dep.temporal !== 'INDEPENDENCE') {
+                        formData.append(`temporal_dep_${i}`, dep.temporal);
+                        formData.append(`temporal_direction_${i}`, 'FORWARD');
+                    }
+                    // Only append existential dependency if it's not INDEPENDENCE
+                    if (dep.existential && dep.existential !== 'INDEPENDENCE') {
+                        formData.append(`existential_dep_${i}`, dep.existential);
+                        if (dep.existential_direction) {
+                            formData.append(`existential_direction_${i}`, dep.existential_direction);
+                        } else {
+                            formData.append(`existential_direction_${i}`, 'BOTH');
+                        }
+                    }
+                });
+            } else if (op.formal_input.operation === 'delete') {
+                formData.append('activity', op.formal_input.activity);
+            } else if (op.formal_input.operation === 'modify') {
+                formData.append('from_activity', op.formal_input.from_activity);
+                formData.append('to_activity', op.formal_input.to_activity);
+                if (op.formal_input.temporal_dep && op.formal_input.temporal_dep !== 'INDEPENDENCE') {
+                    formData.append('temporal_dep', op.formal_input.temporal_dep);
+                    formData.append('temporal_direction', op.formal_input.temporal_direction || 'FORWARD');
+                }
+                if (op.formal_input.existential_dep && op.formal_input.existential_dep !== 'INDEPENDENCE') {
+                    formData.append('existential_dep', op.formal_input.existential_dep);
+                    formData.append('existential_direction', op.formal_input.existential_direction || 'BOTH');
+                }
+            } else if (op.formal_input.operation === 'move') {
+                formData.append('activity', op.formal_input.activity);
+                const deps = op.formal_input.dependencies;
+                formData.append('dependency_count', deps.length);
+                deps.forEach((dep, i) => {
+                    formData.append(`from_activity_${i}`, dep.from);
+                    formData.append(`to_activity_${i}`, dep.to);
+                    // Only append temporal dependency if it's not INDEPENDENCE
+                    if (dep.temporal && dep.temporal !== 'INDEPENDENCE') {
+                        formData.append(`temporal_dep_${i}`, dep.temporal);
+                        formData.append(`temporal_direction_${i}`, dep.temporal_direction || 'FORWARD');
+                    }
+                    // Only append existential dependency if it's not INDEPENDENCE
+                    if (dep.existential && dep.existential !== 'INDEPENDENCE') {
+                        formData.append(`existential_dep_${i}`, dep.existential);
+                        formData.append(`existential_direction_${i}`, dep.existential_direction || 'BOTH');
+                    }
+                });
+            } else if (op.formal_input.operation === 'skip') {
+                formData.append('activity_to_skip', op.formal_input.activity);
+            }
+
+            // Show operation details above result
+            const detailsDiv = document.getElementById('modified-dependencies-display');
+            detailsDiv.innerHTML = `<div class='alert alert-info'><strong>${op.id}. ${op.title}</strong><br>${op.description}<br><pre>${JSON.stringify(op.formal_input, null, 2)}</pre><span class='loading'></span> Applying operation...</div>`;
+
+            fetch('/api/change', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displayDependenciesComparison(data.original, data.modified, 'modified-dependencies-display');
+                    document.getElementById('export-button').style.display = 'inline-block';
+                } else {
+                    detailsDiv.innerHTML = `<div class='alert alert-danger'>Error: ${data.error}</div>`;
+                    document.getElementById('export-button').style.display = 'none';
+                }
+            })
+            .catch(error => {
+                detailsDiv.innerHTML = `<div class='alert alert-danger'>An unexpected error occurred.</div>`;
+                document.getElementById('export-button').style.display = 'none';
+            });
+        })
+        .catch(error => {
+            const detailsDiv = document.getElementById('modified-dependencies-display');
+            detailsDiv.innerHTML = `<div class='alert alert-danger'>Failed to load ${type.toUpperCase()} matrix: ${error.message}</div>`;
+            document.getElementById('export-button').style.display = 'none';
+        });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    fetchOperations();
+    document.getElementById('operation-type').addEventListener('change', fetchOperations);
     console.log('Business Process Redesign Tool initialized');
 });

@@ -1486,13 +1486,19 @@ function applyOperation(op, type) {
                 deps.forEach((dep, i) => {
                     formData.append(`from_activity_${i}`, dep.from);
                     formData.append(`to_activity_${i}`, dep.to);
-                    formData.append(`temporal_dep_${i}`, dep.temporal);
-                    formData.append(`temporal_direction_${i}`, 'FORWARD');
-                    formData.append(`existential_dep_${i}`, dep.existential);
-                    if (dep.existential_direction) {
-                        formData.append(`existential_direction_${i}`, dep.existential_direction);
-                    } else {
-                        formData.append(`existential_direction_${i}`, 'BOTH');
+                    // Only append temporal dependency if it's not INDEPENDENCE
+                    if (dep.temporal && dep.temporal !== 'INDEPENDENCE') {
+                        formData.append(`temporal_dep_${i}`, dep.temporal);
+                        formData.append(`temporal_direction_${i}`, 'FORWARD');
+                    }
+                    // Only append existential dependency if it's not INDEPENDENCE
+                    if (dep.existential && dep.existential !== 'INDEPENDENCE') {
+                        formData.append(`existential_dep_${i}`, dep.existential);
+                        if (dep.existential_direction) {
+                            formData.append(`existential_direction_${i}`, dep.existential_direction);
+                        } else {
+                            formData.append(`existential_direction_${i}`, 'BOTH');
+                        }
                     }
                 });
             } else if (op.formal_input.operation === 'delete') {
@@ -1500,13 +1506,13 @@ function applyOperation(op, type) {
             } else if (op.formal_input.operation === 'modify') {
                 formData.append('from_activity', op.formal_input.from_activity);
                 formData.append('to_activity', op.formal_input.to_activity);
-                if (op.formal_input.temporal_dep) {
+                if (op.formal_input.temporal_dep && op.formal_input.temporal_dep !== 'INDEPENDENCE') {
                     formData.append('temporal_dep', op.formal_input.temporal_dep);
-                    formData.append('temporal_direction', 'FORWARD');
+                    formData.append('temporal_direction', op.formal_input.temporal_direction || 'FORWARD');
                 }
-                if (op.formal_input.existential_dep) {
+                if (op.formal_input.existential_dep && op.formal_input.existential_dep !== 'INDEPENDENCE') {
                     formData.append('existential_dep', op.formal_input.existential_dep);
-                    formData.append('existential_direction', 'BOTH');
+                    formData.append('existential_direction', op.formal_input.existential_direction || 'BOTH');
                 }
             } else if (op.formal_input.operation === 'move') {
                 formData.append('activity', op.formal_input.activity);
@@ -1515,11 +1521,13 @@ function applyOperation(op, type) {
                 deps.forEach((dep, i) => {
                     formData.append(`from_activity_${i}`, dep.from);
                     formData.append(`to_activity_${i}`, dep.to);
-                    if (dep.temporal) {
+                    // Only append temporal dependency if it's not INDEPENDENCE
+                    if (dep.temporal && dep.temporal !== 'INDEPENDENCE') {
                         formData.append(`temporal_dep_${i}`, dep.temporal);
                         formData.append(`temporal_direction_${i}`, dep.temporal_direction || 'FORWARD');
                     }
-                    if (dep.existential) {
+                    // Only append existential dependency if it's not INDEPENDENCE
+                    if (dep.existential && dep.existential !== 'INDEPENDENCE') {
                         formData.append(`existential_dep_${i}`, dep.existential);
                         formData.append(`existential_direction_${i}`, dep.existential_direction || 'BOTH');
                     }

@@ -35,7 +35,6 @@ BPMN_LOCKS = [
     {'from': 'h', 'to': 'i', 'temporal': False, 'existential': True},
     {'from': 'h', 'to': 'j', 'temporal': False, 'existential': True},
     {'from': 'e', 'to': 'f', 'temporal': True, 'existential': False},
-    {'from': 'b', 'to': 'e', 'temporal': True, 'existential': False},
 ]
 
 def load_bpmn_traces():
@@ -76,26 +75,8 @@ def get_declare_locks():
 BPMN_OPERATIONS = [
     {
         'id': 1,
-        'title': 'Make e optional',
-        'description': 'Make the execution of activity e optional, i.e., skip e.',
-        'formal_input': {
-            'operation': 'skip',
-            'activity': 'e'
-        }
-    },
-    {
-        'id': 2,
-        'title': 'Remove activity f',
-        'description': 'Remove activity f from the process.',
-        'formal_input': {
-            'operation': 'delete',
-            'activity': 'f'
-        }
-    },
-    {
-        'id': 3,
         'title': 'Insert activity c',
-        'description': 'Insert a new activity c. c is exclusive to any other activity after a.',
+        'description': 'Insert a new activity c so that the process ends as soon as c is executed. This means c is exclusive to any other activity after a.',
         'formal_input': {
             'operation': 'insert',
             'activity': 'c',
@@ -113,54 +94,9 @@ BPMN_OPERATIONS = [
         }
     },
     {
-        'id': 4,
-        'title': 'Make h parallel to i',
-        'description': 'Modify the relationship between activities h and i so that h is executed in parallel with i.',
-        'formal_input': {
-            'operation': 'modify',
-            'from_activity': 'h',
-            'to_activity': 'i',
-            'temporal_dep': None,
-            'existential_dep': 'EQUIVALENCE'
-        }
-    },
-    {
-        'id': 5,
-        'title': 'Move h before b',
-        'description': 'Move activity h before activity b so that b is executed directly after a and directly before b. h does not have to follow a. Activities i and j always occur after h.',
-        'formal_input': {
-            'operation': 'move',
-            'activity': 'h',
-            'dependencies': [
-                {'from': 'h', 'to': 'b', 'temporal': 'DIRECT', 'existential': 'EQUIVALENCE'},
-                {'from': 'a', 'to': 'h', 'temporal': 'DIRECT', 'existential': 'IMPLICATION', 'existential_direction': 'BACKWARD'},
-                {'from': 'h', 'to': 'i', 'temporal': 'EVENTUAL'},
-                {'from': 'h', 'to': 'j', 'temporal': 'EVENTUAL'},
-            ]
-        }
-    }
-]
-
-# Hardcoded DECLARE operations
-DECLARE_OPERATIONS = [
-    {
-        'id': 1,
-        'title': 'Insert activity c',
-        'description': 'Insert a new activity c so that the execution of activity f leads to the execution of c before or after f. If activity a and b occur, activity c should always occur afterward.',
-        'formal_input': {
-            'operation': 'insert',
-            'activity': 'c',
-            'dependencies': [
-                {'from': 'a', 'to': 'c', 'temporal': 'EVENTUAL', 'existential': 'IMPLICATION', 'existential_direction': 'BACKWARD'},
-                {'from': 'f', 'to': 'c', 'temporal': 'INDEPENDENCE', 'existential': 'IMPLICATION', 'existential_direction': 'FORWARD'},
-                {'from': 'b', 'to': 'c', 'temporal': 'EVENTUAL', 'existential': 'IMPLICATION', 'existential_direction': 'FORWARD'},
-            ]
-        }
-    },
-    {
         'id': 2,
         'title': 'Remove activity f',
-        'description': 'Remove activity f from the process.',
+        'description': 'Remove activity f.',
         'formal_input': {
             'operation': 'delete',
             'activity': 'f'
@@ -180,21 +116,90 @@ DECLARE_OPERATIONS = [
     },
     {
         'id': 4,
+        'title': 'Move h before b',
+        'description': 'Move activity h before activity b so that h is executed directly after a and directly before b. However, h does not always have to follow a. The inclusive OR relationship between h and i, and h and j should not be changed, respectively.',
+        'formal_input': {
+            'operation': 'move',
+            'activity': 'h',
+            'dependencies': [
+                {'from': 'h', 'to': 'b', 'temporal': 'DIRECT', 'existential': 'EQUIVALENCE'},
+                {'from': 'a', 'to': 'h', 'temporal': 'DIRECT', 'existential': 'IMPLICATION', 'existential_direction': 'BACKWARD'},
+                {'from': 'h', 'to': 'i', 'temporal': 'EVENTUAL', 'existential': 'OR'},
+                {'from': 'h', 'to': 'j', 'temporal': 'EVENTUAL', 'existential': 'OR'},
+            ]
+        }
+    },
+    {
+        'id': 5,
+        'title': 'Make e optional',
+        'description': 'Make the execution of activity e optional, i.e., skip e.',
+        'formal_input': {
+            'operation': 'skip',
+            'activity': 'e'
+        }
+    }
+]
+
+# Hardcoded DECLARE operations
+DECLARE_OPERATIONS = [
+    {
+        'id': 1,
+        'title': 'Modify e-g relationship',
+        'description': 'Modify the relationship between activities e and g so that whenever activity e occurs, activity g occurs as well, i.e., the existence of e implies the existence of g.',
+        'formal_input': {
+            'operation': 'modify',
+            'from_activity': 'e',
+            'to_activity': 'g',
+            'temporal_dep': None,
+            'existential_dep': 'IMPLICATION',
+            'existential_direction': 'FORWARD'
+        }
+    },
+    {
+        'id': 2,
+        'title': 'Remove activity f',
+        'description': 'Remove activity f.',
+        'formal_input': {
+            'operation': 'delete',
+            'activity': 'f'
+        }
+    },
+    {
+        'id': 3,
         'title': 'Move d before a',
-        'description': 'Move activity d before activity a. Activity d has to occur before activity a now. However, activity a can still occur without activity d being executed.',
+        'description': 'Move activity d before a. This means, activity d has to occur before activity a now. However, activity a can still occur without activity d being executed.',
         'formal_input': {
             'operation': 'move',
             'activity': 'd',
             'dependencies': [
-                {'from': 'd', 'to': 'a', 'temporal': 'EVENTUAL', 'existential': 'IMPLICATION', 'existential_direction': 'BACKWARD'},
                 {'from': 'b', 'to': 'd', 'temporal': 'INDEPENDENCE', 'existential': 'NEGATED_EQUIVALENCE'},
+                {'from': 'd', 'to': 'a', 'temporal': 'EVENTUAL', 'existential': 'IMPLICATION', 'existential_direction': 'FORWARD'},
+                {'from': 'd', 'to': 'e', 'temporal': 'INDEPENDENCE', 'existential': 'OR'},
+                {'from': 'd', 'to': 'f', 'temporal': 'INDEPENDENCE', 'existential': 'OR'},
+                {'from': 'd', 'to': 'g', 'temporal': 'INDEPENDENCE', 'existential': 'OR'},
+                {'from': 'd', 'to': 'h', 'temporal': 'INDEPENDENCE', 'existential': 'INDEPENDENCE'},
+                {'from': 'd', 'to': 'i', 'temporal': 'INDEPENDENCE', 'existential': 'INDEPENDENCE'},
+            ]
+        }
+    },
+    {
+        'id': 4,
+        'title': 'Insert activity c',
+        'description': 'Insert a new activity c so that the execution of activity f leads to the execution of c before or after f. An occurrence of activity c implies an occurrence of a beforehand. An occurrence of activity b implies the occurrence of activity c afterward.',
+        'formal_input': {
+            'operation': 'insert',
+            'activity': 'c',
+            'dependencies': [
+                {'from': 'a', 'to': 'c', 'temporal': 'EVENTUAL', 'existential': 'IMPLICATION', 'existential_direction': 'BACKWARD'},
+                {'from': 'b', 'to': 'c', 'temporal': 'EVENTUAL', 'existential': 'IMPLICATION', 'existential_direction': 'BACKWARD'},
+                {'from': 'f', 'to': 'c', 'temporal': 'INDEPENDENCE', 'existential': 'IMPLICATION', 'existential_direction': 'FORWARD'},
             ]
         }
     },
     {
         'id': 5,
         'title': 'Make a optional',
-        'description': 'Make the execution of activity a optional, i.e., skip a.',
+        'description': 'Make the execution of activity a optional in any case, i.e., skip a.',
         'formal_input': {
             'operation': 'skip',
             'activity': 'a'
@@ -677,22 +682,39 @@ def change_matrix():
                 new_dep = modified_matrix.get_dependency(frm, to)
                 orig_temporal, orig_existential = orig_dep if orig_dep else (None, None)
                 new_temporal, new_existential = new_dep if new_dep else (None, None)
-                
-                print(f"[DEBUG] Lock validation for {frm}->{to}: orig_dep={orig_dep}, new_dep={new_dep}")
-                
+
+                source_deleted = frm not in modified_matrix.get_activities()
+                target_deleted = to not in modified_matrix.get_activities()
+
+                print(f"[DEBUG] Lock validation for {frm}->{to}: orig_dep={orig_dep}, new_dep={new_dep}, source_deleted={source_deleted}, target_deleted={target_deleted}")
+
+                # For temporal locks: only check if both activities still exist
+                # Temporal locks constrain HOW activities relate when both exist, not WHETHER they can be deleted
                 if temporal_lock:
-                    temporal_changed = False
-                    if orig_temporal != new_temporal:
-                        if bool(orig_temporal) != bool(new_temporal):
-                            temporal_changed = True
-                        elif orig_temporal and new_temporal:
-                            if orig_temporal.type != new_temporal.type or orig_temporal.direction != new_temporal.direction:
+                    # If either activity is deleted, temporal lock doesn't apply
+                    if source_deleted or target_deleted:
+                        print(f"[DEBUG] Skipping temporal lock check for {frm}->{to}: activity deleted")
+                    else:
+                        # Both activities still exist, check if temporal relationship changed
+                        temporal_changed = False
+                        if orig_temporal != new_temporal:
+                            if bool(orig_temporal) != bool(new_temporal):
                                 temporal_changed = True
-                    
-                    if temporal_changed:
-                        return jsonify({"success": False, "error": f"Temporal dependency from '{frm}' to '{to}' is locked and cannot be changed."})
-                
+                            elif orig_temporal and new_temporal:
+                                if orig_temporal.type != new_temporal.type or orig_temporal.direction != new_temporal.direction:
+                                    temporal_changed = True
+
+                        if temporal_changed:
+                            return jsonify({"success": False, "error": f"Temporal dependency from '{frm}' to '{to}' is locked and cannot be changed."})
+
+                # For existential locks: check deletion first, then dependency changes
+                # Existential locks constrain WHETHER activities can coexist, so deletion is blocked
                 if existential_lock:
+                    # Check if either activity was deleted
+                    if source_deleted or target_deleted:
+                        return jsonify({"success": False, "error": f"Existential dependency from '{frm}' to '{to}' is locked. Cannot delete activity."})
+
+                    # Both activities still exist, check if existential relationship changed
                     existential_changed = False
                     if orig_existential != new_existential:
                         if bool(orig_existential) != bool(new_existential):
@@ -700,7 +722,7 @@ def change_matrix():
                         elif orig_existential and new_existential:
                             if orig_existential.type != new_existential.type or orig_existential.direction != new_existential.direction:
                                 existential_changed = True
-                    
+
                     if existential_changed:
                         return jsonify({"success": False, "error": f"Existential dependency from '{frm}' to '{to}' is locked and cannot be changed."})
             # Store the modified matrix for export
@@ -788,7 +810,22 @@ def change_matrix():
         else:
             return jsonify({"success": False, "error": "Operation not supported or failed."})
 
+    except AttributeError as e:
+        error_msg = str(e)
+        if "'NoneType' object has no attribute" in error_msg:
+            return jsonify({
+                "success": False,
+                "error": "Invalid operation: Cannot modify this relationship. The operation would create an invalid process model. Please check that the specified dependencies are compatible with the current process structure."
+            })
+        return jsonify({"success": False, "error": f"Attribute error: {error_msg}"})
+    except ValueError as e:
+        # ValueError typically contains useful user-facing messages from operations
+        return jsonify({"success": False, "error": str(e)})
+    except KeyError as e:
+        # KeyError when enum conversion fails or activities not found
+        return jsonify({"success": False, "error": f"Invalid value: {e}. Please check that all activities and dependency types are valid."})
     except Exception as e:
+        # Generic catch-all for unexpected errors
         return jsonify({"success": False, "error": str(e)})
 
 @app.route("/api/export", methods=["GET"])

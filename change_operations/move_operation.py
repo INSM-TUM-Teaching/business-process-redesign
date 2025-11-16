@@ -2,6 +2,7 @@ from typing import Tuple, Optional, Dict, List
 from dependencies import (
     TemporalDependency,
     ExistentialDependency,
+    Direction,
 )
 from adjacency_matrix import AdjacencyMatrix
 from optimized_acceptance_variants import generate_optimized_acceptance_variants as generate_acceptance_variants
@@ -36,7 +37,47 @@ def move_activity(
         new_variants = move_activity_in_variants(activity, dependencies, variants)
     except ValueError as e:
         raise ValueError(f"The input is invalid: {str(e)}") from e
-    return  variants_to_matrix(new_variants, matrix.activities)
+
+    result_matrix = variants_to_matrix(new_variants, matrix.activities)
+
+    # Override any inferred dependencies with the explicitly specified dependencies
+    for (source, target), (temp_dep, exist_dep) in dependencies.items():
+        if temp_dep is not None or exist_dep is not None:
+            if source in result_matrix.activities and target in result_matrix.activities:
+                current_temp, current_exist = result_matrix.dependencies.get((source, target), (None, None))
+
+                final_temp = temp_dep if temp_dep is not None else current_temp
+                final_exist = exist_dep if exist_dep is not None else current_exist
+
+                result_matrix.add_dependency(source, target, final_temp, final_exist)
+
+                # Also update the reverse dependency
+                # This ensures that if (d,a) = (EVENTUAL FORWARD, IMPLICATION FORWARD)
+                # then (a,d) = (EVENTUAL BACKWARD, IMPLICATION BACKWARD)
+                if target in result_matrix.activities and source in result_matrix.activities:
+                    # Create the reverse temporal dependency
+                    reverse_temp = None
+                    if final_temp is not None:
+                        if final_temp.direction == Direction.FORWARD:
+                            reverse_temp = TemporalDependency(final_temp.type, Direction.BACKWARD)
+                        elif final_temp.direction == Direction.BACKWARD:
+                            reverse_temp = TemporalDependency(final_temp.type, Direction.FORWARD)
+                        else:  # Direction.BOTH
+                            reverse_temp = TemporalDependency(final_temp.type, Direction.BOTH)
+
+                    # Create the reverse existential dependency
+                    reverse_exist = None
+                    if final_exist is not None:
+                        if final_exist.direction == Direction.FORWARD:
+                            reverse_exist = ExistentialDependency(final_exist.type, Direction.BACKWARD)
+                        elif final_exist.direction == Direction.BACKWARD:
+                            reverse_exist = ExistentialDependency(final_exist.type, Direction.FORWARD)
+                        else:  # Direction.BOTH
+                            reverse_exist = ExistentialDependency(final_exist.type, Direction.BOTH)
+
+                    result_matrix.add_dependency(target, source, reverse_temp, reverse_exist)
+
+    return result_matrix
 
 def move_activity_in_variants(
         activity: str,
