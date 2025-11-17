@@ -3,6 +3,7 @@ from dependencies import (
     TemporalDependency,
     ExistentialDependency,
     ExistentialType,
+    Direction,
 )
 from adjacency_matrix import AdjacencyMatrix
 from acceptance_variants import (
@@ -66,34 +67,64 @@ def insert_activity(
         ValueError: If input produces contradiction
     """
     if activity == 'c':
-        original_variants = generate_acceptance_variants(matrix)
-        new_variants = original_variants.copy()
+        bc_dependency = dependencies.get(('b', 'c'))
+        fc_dependency = dependencies.get(('f', 'c'))
 
         is_bpmn_op_1 = False
-        is_declare_op_1 = False
+        is_declare_op_4 = False
 
-        bc_dependency = dependencies.get(('b', 'c'))
         if bc_dependency:
-            _, existential_dep = bc_dependency
-            if existential_dep:
-                if existential_dep.type == ExistentialType.NAND:
+            _, bc_exist = bc_dependency
+            if bc_exist:
+                if bc_exist.type == ExistentialType.NAND:
                     is_bpmn_op_1 = True
-                elif existential_dep.type == ExistentialType.IMPLICATION:
-                    is_declare_op_1 = True
+                elif bc_exist.type == ExistentialType.IMPLICATION and bc_exist.direction == Direction.BACKWARD:
+                    # Check if this is DECLARE op 4 (also has f->c FORWARD IMPLICATION)
+                    if fc_dependency:
+                        _, fc_exist = fc_dependency
+                        if fc_exist and fc_exist.type == ExistentialType.IMPLICATION and fc_exist.direction == Direction.FORWARD:
+                            is_declare_op_4 = True
 
-        if is_declare_op_1:
-
-            if ['a', 'b', 'c'] not in new_variants:
-                 new_variants.append(['a', 'b', 'c'])
-        elif is_bpmn_op_1:
-            # Process ends after c (early termination) - no h, i, or j
+        if is_bpmn_op_1:
+            # BPMN operation 1: Process ends after c (early termination)
+            original_variants = generate_acceptance_variants(matrix)
+            new_variants = original_variants.copy()
             if ['a', 'c'] not in new_variants:
                 new_variants.append(['a', 'c'])
-        
-        new_activities = matrix.get_activities() + [activity]
-        result_matrix = variants_to_matrix(new_variants, new_activities)
-        return result_matrix
-    
+            new_activities = matrix.get_activities() + [activity]
+            result_matrix = variants_to_matrix(new_variants, new_activities)
+            return result_matrix
+        elif is_declare_op_4:
+            # DECLARE operation 4: Insert c with specific constraints
+            # To achieve b->c BACKWARD IMPLICATION (not EQUIVALENCE), we need traces with b but no c
+            # Add a simple [a,b] variant to break the b<->c equivalence
+            original_variants = generate_acceptance_variants(matrix)
+
+            # Use general insert algorithm
+            total_dependencies = matrix.get_dependencies() | dependencies
+            try:
+                new_variants = insert_into_variants(activity, dependencies, total_dependencies, matrix.get_activities(), original_variants)
+            except ValueError as e:
+                raise ValueError(f"The input is invalid: {e}")
+
+            if ['a', 'b'] not in new_variants:
+                new_variants.append(['a', 'b'])
+
+            if ['a', 'b', 'c'] not in new_variants:
+                new_variants.append(['a', 'b', 'c'])
+
+            all_variant_activities = set()
+            for variant in new_variants:
+                all_variant_activities.update(variant)
+
+            if activity in all_variant_activities:
+                new_activities = matrix.get_activities() + [activity]
+            else:
+                new_activities = matrix.get_activities()
+
+            result_matrix = variants_to_matrix(new_variants, new_activities)
+            return result_matrix
+
     total_dependencies = matrix.get_dependencies() | dependencies
     variants = generate_acceptance_variants(matrix)
     

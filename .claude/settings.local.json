@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c:*)",
+      "Bash(python:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(/tmp/move_operation_main.py)",
+      "Bash(/tmp/optimized_acceptance_variants_main.py)",
+      "Bash(/tmp/modify_operation_main.py)",
+      "Bash(/tmp/insert_operation_main.py)",
+      "Bash(/tmp/test_modify_operation_main.py)",
+      "Bash(/tmp/test_lock_depencies_violations_main.py:*)",
+      "Bash(python3 -m pytest:*)",
+      "Bash(python3:*)",
+      "Bash(pytest:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
