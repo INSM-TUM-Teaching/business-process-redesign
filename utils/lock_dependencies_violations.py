@@ -2,6 +2,7 @@ from typing import List, Dict, Tuple
 from adjacency_matrix import AdjacencyMatrix
 from optimized_acceptance_variants import generate_optimized_acceptance_variants as generate_acceptance_variants
 from dependencies import TemporalType, ExistentialType
+from constraint_logic import check_existential_relationship
 
 
 def _dependencies_equal(dep1, dep2) -> bool:
@@ -14,6 +15,47 @@ def _dependencies_equal(dep1, dep2) -> bool:
     if is_independence_or_none_1 or is_independence_or_none_2:
         return False
     return dep1.type == dep2.type and dep1.direction == dep2.direction
+
+
+def _check_existential_constraint_in_sequences(
+    modified_matrix: AdjacencyMatrix,
+    source: str,
+    target: str,
+    existential_dep
+) -> bool:
+    """
+    Check if an existential dependency constraint is satisfied in ALL acceptance sequences.
+
+    This is crucial for dependencies like OR, EQUIVALENCE, etc. where the constraint must hold
+    across all process instances, not just be present in the matrix.
+
+    Args:
+        modified_matrix: The matrix to check
+        source: Source activity
+        target: Target activity
+        existential_dep: The existential dependency to validate
+
+    Returns:
+        True if the constraint is satisfied in all sequences, False otherwise
+    """
+    if existential_dep is None or existential_dep.type == ExistentialType.INDEPENDENCE:
+        return True
+
+    sequences = generate_acceptance_variants(modified_matrix)
+
+    for sequence in sequences:
+        source_present = source in sequence
+        target_present = target in sequence
+
+        if not check_existential_relationship(
+            source_present,
+            target_present,
+            existential_dep.type,
+            existential_dep.direction
+        ):
+            return False
+
+    return True
 
 
 def locked_dependencies_preserved(initial_matrix: AdjacencyMatrix, modified_matrix: AdjacencyMatrix, locked_dependencies: Dict[Tuple[str, str], Tuple[bool, bool]], deletion_allowed: List[str]) -> bool:
@@ -54,6 +96,12 @@ def locked_dependencies_preserved(initial_matrix: AdjacencyMatrix, modified_matr
                     return False
                 if exist_locked and not _dependencies_equal(modi_exist_dep, existential_dependency):
                     return False
+
+                if exist_locked and existential_dependency is not None:
+                    if not _check_existential_constraint_in_sequences(
+                        modified_matrix, source, target, existential_dependency
+                    ):
+                        return False
 
     return True
 
@@ -106,6 +154,12 @@ def get_violated_locked_dependencies(
                     temporal_violated = True
                 if exist_locked and not _dependencies_equal(modi_exist_dep, existential_dependency):
                     existential_violated = True
+
+                if exist_locked and existential_dependency is not None and not existential_violated:
+                    if not _check_existential_constraint_in_sequences(
+                        modified_matrix, source, target, existential_dependency
+                    ):
+                        existential_violated = True
 
         if temporal_violated or existential_violated:
             violations[(source, target)] = (temporal_violated, existential_violated)

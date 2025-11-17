@@ -1122,14 +1122,14 @@ function createDependencyGraph(originalData, modifiedData, changes) {
     
     // Create edges first (so they appear behind nodes)
     const edgeElements = [];
-    
+
     // Get all dependencies from both original and modified data
     const originalDeps = getDependencyPairs(originalData);
     const modifiedDeps = getDependencyPairs(modifiedData);
-    
+
     // Create a map to track edge types
     const edgeMap = new Map();
-    
+
     // Process original dependencies
     originalDeps.forEach(dep => {
         const key = `${dep.from}-${dep.to}`;
@@ -1142,7 +1142,7 @@ function createDependencyGraph(originalData, modifiedData, changes) {
             type: 'existing'
         });
     });
-    
+
     // Process modified dependencies
     modifiedDeps.forEach(dep => {
         const key = `${dep.from}-${dep.to}`;
@@ -1163,7 +1163,7 @@ function createDependencyGraph(originalData, modifiedData, changes) {
             });
         }
     });
-    
+
     // Mark removed dependencies (only if truly removed, not if became independent)
     originalDeps.forEach(dep => {
         const key = `${dep.from}-${dep.to}`;
@@ -1185,24 +1185,24 @@ function createDependencyGraph(originalData, modifiedData, changes) {
         if (edge.type === 'hidden') {
             return;
         }
-        
+
         const fromPos = nodePositions[edge.from];
         const toPos = nodePositions[edge.to];
-        
+
         if (!fromPos || !toPos) return;
-        
+
         // Calculate edge positions (from edge of circles, not centers)
         const dx = toPos.x - fromPos.x;
         const dy = toPos.y - fromPos.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         const unitX = dx / distance;
         const unitY = dy / distance;
-        
+
         const startX = fromPos.x + unitX * nodeRadius;
         const startY = fromPos.y + unitY * nodeRadius;
         const endX = toPos.x - unitX * nodeRadius;
         const endY = toPos.y - unitY * nodeRadius;
-        
+
         // Create line element (no arrowheads)
         const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
         line.setAttribute('x1', startX);
@@ -1211,7 +1211,7 @@ function createDependencyGraph(originalData, modifiedData, changes) {
         line.setAttribute('y2', endY);
         line.setAttribute('stroke-width', '3');
         line.classList.add('dependency-edge', `edge-${edge.type}`);
-        
+
         // Set color based on change type
         let strokeColor;
         switch (edge.type) {
@@ -1228,7 +1228,7 @@ function createDependencyGraph(originalData, modifiedData, changes) {
                 strokeColor = '#6A757E'; // Muted grey for existing
         }
         line.setAttribute('stroke', strokeColor);
-        
+
         // Add verbose hover tooltip
         let tooltipText = '';
         switch (edge.type) {
@@ -1249,9 +1249,9 @@ function createDependencyGraph(originalData, modifiedData, changes) {
                 const existingType = identifyDependencyType(edge.originalContent || edge.modifiedContent);
                 tooltipText = `UNCHANGED DEPENDENCY\n\nExisting dependency: ${edge.from} ↔ ${edge.to}\nDependency Type: ${existingType}\n\nExplanation:\n${createVerboseExplanation(edge.originalDetailed || edge.originalExplanation || edge.modifiedDetailed || edge.modifiedExplanation, edge.from, edge.to)}`;
         }
-        
+
         line.innerHTML = `<title>${tooltipText}</title>`;
-        
+
         svg.appendChild(line);
         edgeElements.push(line);
     });

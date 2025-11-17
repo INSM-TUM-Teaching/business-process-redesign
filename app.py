@@ -23,6 +23,7 @@ from change_operations.modify_operation import modify_dependency
 from change_operations.move_operation import move_activity
 from change_operations.parallelize_operation import parallelize_activities
 from change_operations.condition_update import condition_update
+from utils.lock_dependencies_violations import locked_dependencies_preserved, get_violated_locked_dependencies
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'temp_uploads'
@@ -672,59 +673,52 @@ def change_matrix():
                 locks = json.loads(request.form.get('locks', '[]'))
             except Exception:
                 pass
+
+            locked_dependencies_dict = {}
             for lock in locks:
                 frm = lock.get('from')
                 to = lock.get('to')
-                temporal_lock = lock.get('temporal')
-                existential_lock = lock.get('existential')
-                # Get original dep from source matrix
-                orig_dep = source_matrix_for_diff.get_dependency(frm, to)
-                new_dep = modified_matrix.get_dependency(frm, to)
-                orig_temporal, orig_existential = orig_dep if orig_dep else (None, None)
-                new_temporal, new_existential = new_dep if new_dep else (None, None)
+                temporal_lock = lock.get('temporal', False)
+                existential_lock = lock.get('existential', False)
+                locked_dependencies_dict[(frm, to)] = (temporal_lock, existential_lock)
 
-                source_deleted = frm not in modified_matrix.get_activities()
-                target_deleted = to not in modified_matrix.get_activities()
+            if locked_dependencies_dict:
+                if not locked_dependencies_preserved(
+                    source_matrix_for_diff,
+                    modified_matrix,
+                    locked_dependencies_dict,
+                    deletion_allowed=[]
+                ):
+                    violations = get_violated_locked_dependencies(
+                        source_matrix_for_diff,
+                        modified_matrix,
+                        locked_dependencies_dict,
+                        deletion_allowed=[]
+                    )
 
-                print(f"[DEBUG] Lock validation for {frm}->{to}: orig_dep={orig_dep}, new_dep={new_dep}, source_deleted={source_deleted}, target_deleted={target_deleted}")
+                    error_messages = []
+                    for (frm, to), (temp_violated, exist_violated) in violations.items():
+                        if temp_violated and exist_violated:
+                            error_messages.append(f"• {frm} → {to}: Both temporal and existential dependencies are locked and were violated")
+                        elif temp_violated:
+                            error_messages.append(f"• {frm} → {to}: Temporal dependency is locked and was violated")
+                        elif exist_violated:
+                            orig_dep = source_matrix_for_diff.get_dependency(frm, to)
+                            if orig_dep:
+                                _, orig_existential = orig_dep
+                                if orig_existential and orig_existential.type.name == 'OR':
+                                    error_messages.append(f"• {frm} → {to}: OR constraint violated (at least one must occur in all traces)")
+                                else:
+                                    error_messages.append(f"• {frm} → {to}: {orig_existential.type.name} constraint violated")
+                            else:
+                                error_messages.append(f"• {frm} → {to}: Existential dependency violated")
 
-                # For temporal locks: only check if both activities still exist
-                # Temporal locks constrain HOW activities relate when both exist, not WHETHER they can be deleted
-                if temporal_lock:
-                    # If either activity is deleted, temporal lock doesn't apply
-                    if source_deleted or target_deleted:
-                        print(f"[DEBUG] Skipping temporal lock check for {frm}->{to}: activity deleted")
+                    if len(error_messages) == 1:
+                        error_msg = f"Operation violates locked dependency: {error_messages[0][2:]}"  # Remove bullet point
                     else:
-                        # Both activities still exist, check if temporal relationship changed
-                        temporal_changed = False
-                        if orig_temporal != new_temporal:
-                            if bool(orig_temporal) != bool(new_temporal):
-                                temporal_changed = True
-                            elif orig_temporal and new_temporal:
-                                if orig_temporal.type != new_temporal.type or orig_temporal.direction != new_temporal.direction:
-                                    temporal_changed = True
+                        error_msg = f"Operation violates {len(error_messages)} locked dependencies:\n" + "\n".join(error_messages)
 
-                        if temporal_changed:
-                            return jsonify({"success": False, "error": f"Temporal dependency from '{frm}' to '{to}' is locked and cannot be changed."})
-
-                # For existential locks: check deletion first, then dependency changes
-                # Existential locks constrain WHETHER activities can coexist, so deletion is blocked
-                if existential_lock:
-                    # Check if either activity was deleted
-                    if source_deleted or target_deleted:
-                        return jsonify({"success": False, "error": f"Existential dependency from '{frm}' to '{to}' is locked. Cannot delete activity."})
-
-                    # Both activities still exist, check if existential relationship changed
-                    existential_changed = False
-                    if orig_existential != new_existential:
-                        if bool(orig_existential) != bool(new_existential):
-                            existential_changed = True
-                        elif orig_existential and new_existential:
-                            if orig_existential.type != new_existential.type or orig_existential.direction != new_existential.direction:
-                                existential_changed = True
-
-                    if existential_changed:
-                        return jsonify({"success": False, "error": f"Existential dependency from '{frm}' to '{to}' is locked and cannot be changed."})
+                    return jsonify({"success": False, "error": error_msg})
             # Store the modified matrix for export
             last_modified_matrix = modified_matrix
             

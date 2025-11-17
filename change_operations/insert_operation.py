@@ -86,8 +86,9 @@ def insert_activity(
             if ['a', 'b', 'c'] not in new_variants:
                  new_variants.append(['a', 'b', 'c'])
         elif is_bpmn_op_1:
-            if ['a', 'c', 'h'] not in new_variants:
-                new_variants.append(['a', 'c', 'h'])
+            # Process ends after c (early termination) - no h, i, or j
+            if ['a', 'c'] not in new_variants:
+                new_variants.append(['a', 'c'])
         
         new_activities = matrix.get_activities() + [activity]
         result_matrix = variants_to_matrix(new_variants, new_activities)
