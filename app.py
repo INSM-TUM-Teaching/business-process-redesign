@@ -19,7 +19,7 @@ from change_operations.skip_operation import skip_activity
 from change_operations.replace_operation import replace_activity
 from change_operations.collapse_operation import collapse_operation
 from change_operations.de_collapse_operation import decollapse_operation
-from change_operations.modify_operation import modify_dependency
+from change_operations.modify_operation import modify_dependencies
 from change_operations.move_operation import move_activity
 from change_operations.parallelize_operation import parallelize_activities
 from change_operations.condition_update import condition_update
