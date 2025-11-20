@@ -1469,12 +1469,20 @@ function applyOperation(op, type) {
                 ];
                 formData.append('locks', JSON.stringify(DECLARE_LOCKS));
             } else {
-                const BPMN_LOCKS = [
-                    {from: 'h', to: 'i', temporal: false, existential: true},
-                    {from: 'h', to: 'j', temporal: false, existential: true},
-                    {from: 'e', to: 'f', temporal: true, existential: false},
-                    {from: 'b', to: 'e', temporal: true, existential: false},
-                ];
+                let BPMN_LOCKS;
+                if (op.id === 4) {
+                    BPMN_LOCKS = [
+                        {from: 'e', to: 'f', temporal: true, existential: false},
+                        {from: 'b', to: 'e', temporal: false, existential: true},
+                    ];
+                } else {
+                    BPMN_LOCKS = [
+                        {from: 'h', to: 'i', temporal: false, existential: true},
+                        {from: 'h', to: 'j', temporal: false, existential: true},
+                        {from: 'e', to: 'f', temporal: true, existential: false},
+                        {from: 'b', to: 'e', temporal: true, existential: false},
+                    ];
+                }
                 formData.append('locks', JSON.stringify(BPMN_LOCKS));
             }
 
